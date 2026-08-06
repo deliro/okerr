@@ -2,7 +2,6 @@
 on:
   release:
     types: [published]
-  workflow_dispatch:
 
 name: Publish to PyPI
 
@@ -13,13 +12,16 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
 
       - name: Build packages
         run: uv build
+
+      - name: Smoke test wheel
+        run: uv run --isolated --no-project --with dist/*.whl python -c "import corrode; assert corrode.Ok(1).unwrap() == 1"
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
