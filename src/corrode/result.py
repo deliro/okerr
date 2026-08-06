@@ -5,6 +5,7 @@ from __future__ import annotations
 import functools
 import inspect
 import sys
+import warnings
 from collections.abc import AsyncGenerator, Awaitable, Callable, Coroutine, Generator, Iterator
 from typing import (
     Any,
@@ -31,25 +32,43 @@ F = TypeVar("F")
 P = ParamSpec("P")
 R = TypeVar("R")
 TBE = TypeVar("TBE", bound=BaseException)
+TE = TypeVar("TE", bound=Exception)
 T2 = TypeVar("T2")
 T3 = TypeVar("T3")
 T4 = TypeVar("T4")
 T5 = TypeVar("T5")
 E2 = TypeVar("E2")
 
+_TRUTHINESS_MSG = (
+    "Ok and Err have no truth value; use is_ok()/is_err(), pattern matching, "
+    "or is_ok_and()/is_err_and() instead of `if result:`"
+)
+
 
 class Ok(Generic[T_co]):
-
     """An ``Ok`` value indicating success, storing arbitrary data for the return value."""
 
     __match_args__ = ("ok_value",)
     __slots__ = ("_value",)
 
+    _value: T_co
+
     def __iter__(self) -> Iterator[T_co]:
         return iter((self._value,))
 
     def __init__(self, value: T_co) -> None:
-        self._value = value
+        object.__setattr__(self, "_value", value)
+
+    def __setattr__(self, name: str, value: object) -> NoReturn:
+        msg = "Ok is immutable"
+        raise AttributeError(msg)
+
+    def __delattr__(self, name: str) -> NoReturn:
+        msg = "Ok is immutable"
+        raise AttributeError(msg)
+
+    def __reduce__(self) -> tuple[Callable[[T_co], Ok[T_co]], tuple[T_co]]:
+        return (Ok, (self._value,))
 
     def __repr__(self) -> str:
         return f"Ok({self._value!r})"
@@ -60,16 +79,42 @@ class Ok(Generic[T_co]):
     def __hash__(self) -> int:
         return hash((True, self._value))
 
+    def __bool__(self) -> NoReturn:
+        raise TypeError(_TRUTHINESS_MSG)
+
     def is_ok(self) -> Literal[True]:
-        """Return ``True`` because this is an ``Ok`` value."""
+        """
+        Return ``True`` because this is an ``Ok`` value.
+
+        Example:
+            >>> Ok(2).is_ok()
+            True
+
+        """
         return True
 
     def is_err(self) -> Literal[False]:
-        """Return ``False`` because this is an ``Ok`` value."""
+        """
+        Return ``False`` because this is an ``Ok`` value.
+
+        Example:
+            >>> Ok(2).is_err()
+            False
+
+        """
         return False
 
     def is_ok_and(self, f: Callable[[T_co], bool]) -> bool:
-        """Return ``True`` if the result is ``Ok`` and the predicate *f* returns ``True``."""
+        """
+        Return ``True`` if the result is ``Ok`` and the predicate *f* returns ``True``.
+
+        Example:
+            >>> Ok(2).is_ok_and(lambda x: x > 1)
+            True
+            >>> Ok(0).is_ok_and(lambda x: x > 1)
+            False
+
+        """
         return f(self._value)
 
     async def is_ok_and_async(self, f: Callable[[T_co], Awaitable[bool]]) -> bool:
@@ -81,6 +126,11 @@ class Ok(Generic[T_co]):
         Return ``True`` if the result is ``Err`` and the predicate *f* returns ``True``.
 
         Since this is ``Ok``, always returns ``False``.
+
+        Example:
+            >>> Ok(2).is_err_and(lambda e: True)
+            False
+
         """
         return False
 
@@ -97,6 +147,11 @@ class Ok(Generic[T_co]):
         Convert from ``Result[T, E]`` to ``T | None``.
 
         Return the contained ``Ok`` value, discarding the error, if any.
+
+        Example:
+            >>> Ok(2).ok()
+            2
+
         """
         return self._value
 
@@ -105,12 +160,24 @@ class Ok(Generic[T_co]):
         Convert from ``Result[T, E]`` to ``E | None``.
 
         Return ``None``, discarding the success value.
+
+        Example:
+            >>> Ok(2).err() is None
+            True
+
         """
         return
 
     @property
     def ok_value(self) -> T_co:
-        """The contained ``Ok`` value."""
+        """
+        The contained ``Ok`` value.
+
+        Example:
+            >>> Ok(2).ok_value
+            2
+
+        """
         return self._value
 
     def expect(self, _message: str) -> T_co:
@@ -122,6 +189,10 @@ class Ok(Generic[T_co]):
         Raises:
             UnwrapError: Never raised for ``Ok``.
 
+        Example:
+            >>> Ok(2).expect("must exist")
+            2
+
         """
         return self._value
 
@@ -132,6 +203,12 @@ class Ok(Generic[T_co]):
         Raises:
             UnwrapError: Always, because this is an ``Ok`` value, with a
                 message including the passed *message* and the ``Ok`` content.
+
+        Example:
+            >>> Ok(2).expect_err("wanted an error")
+            Traceback (most recent call last):
+                ...
+            corrode.result.UnwrapError: wanted an error
 
         """
         raise UnwrapError(self, message)
@@ -145,6 +222,10 @@ class Ok(Generic[T_co]):
         Raises:
             UnwrapError: Never raised for ``Ok``.
 
+        Example:
+            >>> Ok(2).unwrap()
+            2
+
         """
         return self._value
 
@@ -155,6 +236,12 @@ class Ok(Generic[T_co]):
         Raises:
             UnwrapError: Always, because this is an ``Ok`` value.
 
+        Example:
+            >>> Ok(2).unwrap_err()
+            Traceback (most recent call last):
+                ...
+            corrode.result.UnwrapError: Called `Result.unwrap_err()` on an `Ok` value
+
         """
         raise UnwrapError(self, "Called `Result.unwrap_err()` on an `Ok` value")
 
@@ -163,6 +250,11 @@ class Ok(Generic[T_co]):
         Return the contained ``Ok`` value or a provided default.
 
         The default value is ignored because this is an ``Ok``.
+
+        Example:
+            >>> Ok(2).unwrap_or(0)
+            2
+
         """
         return self._value
 
@@ -171,6 +263,11 @@ class Ok(Generic[T_co]):
         Return the contained ``Ok`` value or compute it from a callable.
 
         The callable is never invoked because this is an ``Ok``.
+
+        Example:
+            >>> Ok(2).unwrap_or_else(len)
+            2
+
         """
         return self._value
 
@@ -187,6 +284,11 @@ class Ok(Generic[T_co]):
         Return the contained ``Ok`` value or raise the provided exception.
 
         The exception is never raised because this is an ``Ok``.
+
+        Example:
+            >>> Ok(2).unwrap_or_raise(ValueError)
+            2
+
         """
         return self._value
 
@@ -195,6 +297,11 @@ class Ok(Generic[T_co]):
         Apply *op* to the contained ``Ok`` value.
 
         Map a ``Result[T, E]`` to ``Result[U, E]``, leaving an ``Err`` value untouched.
+
+        Example:
+            >>> Ok(2).map(lambda x: x * 10)
+            Ok(20)
+
         """
         return Ok(op(self._value))
 
@@ -211,6 +318,11 @@ class Ok(Generic[T_co]):
         Apply *op* to the contained ``Ok`` value, or return *default* if ``Err``.
 
         Since this is ``Ok``, *default* is ignored.
+
+        Example:
+            >>> Ok(2).map_or(0, lambda x: x * 10)
+            20
+
         """
         return op(self._value)
 
@@ -227,6 +339,11 @@ class Ok(Generic[T_co]):
         Apply *op* to a contained ``Ok`` value, or *default_op* to a contained ``Err``.
 
         Map a ``Result[T, E]`` to ``U``.
+
+        Example:
+            >>> Ok(2).map_or_else(lambda e: 0, lambda x: x * 10)
+            20
+
         """
         return op(self._value)
 
@@ -247,6 +364,11 @@ class Ok(Generic[T_co]):
         Apply *op* to a contained ``Err`` value, leaving ``Ok`` untouched.
 
         Map a ``Result[T, E]`` to ``Result[T, F]``.
+
+        Example:
+            >>> Ok(2).map_err(str.upper)
+            Ok(2)
+
         """
         return self
 
@@ -263,6 +385,15 @@ class Ok(Generic[T_co]):
         Call *op* if the result is ``Ok``, otherwise return the ``Err`` value of *self*.
 
         This function can be used for control flow based on ``Result`` values.
+
+        Example:
+            >>> def halve(x: int) -> Result[int, str]:
+            ...     return Ok(x // 2) if x % 2 == 0 else Err("odd")
+            >>> Ok(4).and_then(halve)
+            Ok(2)
+            >>> Ok(3).and_then(halve)
+            Err('odd')
+
         """
         return op(self._value)
 
@@ -282,6 +413,11 @@ class Ok(Generic[T_co]):
         Call *op* if the result is ``Err``, otherwise return the ``Ok`` value of *self*.
 
         Since this is ``Ok``, *op* is never called.
+
+        Example:
+            >>> Ok(2).or_else(lambda e: Ok(0))
+            Ok(2)
+
         """
         return self
 
@@ -298,6 +434,12 @@ class Ok(Generic[T_co]):
         Call *op* with the contained value if ``Ok``.
 
         Return the original result unchanged.
+
+        Example:
+            >>> Ok(2).inspect(print)
+            2
+            Ok(2)
+
         """
         op(self._value)
         return self
@@ -320,6 +462,11 @@ class Ok(Generic[T_co]):
         Call *op* with the contained error if ``Err``.
 
         Return the original result unchanged. Since this is ``Ok``, *op* is not called.
+
+        Example:
+            >>> Ok(2).inspect_err(print)
+            Ok(2)
+
         """
         return self
 
@@ -336,17 +483,29 @@ class Ok(Generic[T_co]):
 
     @overload
     def zip(
-        self, r1: Result[T2, E2], r2: Result[T3, E2], /,
+        self,
+        r1: Result[T2, E2],
+        r2: Result[T3, E2],
+        /,
     ) -> Result[tuple[T_co, T2, T3], E2]: ...
 
     @overload
     def zip(
-        self, r1: Result[T2, E2], r2: Result[T3, E2], r3: Result[T4, E2], /,
+        self,
+        r1: Result[T2, E2],
+        r2: Result[T3, E2],
+        r3: Result[T4, E2],
+        /,
     ) -> Result[tuple[T_co, T2, T3, T4], E2]: ...
 
     @overload
     def zip(
-        self, r1: Result[T2, E2], r2: Result[T3, E2], r3: Result[T4, E2], r4: Result[T5, E2], /,
+        self,
+        r1: Result[T2, E2],
+        r2: Result[T3, E2],
+        r3: Result[T4, E2],
+        r4: Result[T5, E2],
+        /,
     ) -> Result[tuple[T_co, T2, T3, T4, T5], E2]: ...
 
     def zip(self, *results: Result[Any, Any]) -> Result[Any, Any]:
@@ -356,11 +515,14 @@ class Ok(Generic[T_co]):
         Returns ``Ok`` of a tuple of all values if all results are ``Ok``.
         Returns the first ``Err`` encountered otherwise.
 
-        Example::
+        Example:
+            >>> Ok(1).zip(Ok("a"))
+            Ok((1, 'a'))
+            >>> Ok(1).zip(Ok("a"), Ok(3.0))
+            Ok((1, 'a', 3.0))
+            >>> Ok(1).zip(Err("bad"))
+            Err('bad')
 
-            Ok(1).zip(Ok("a"))           # Ok((1, "a"))
-            Ok(1).zip(Ok("a"), Ok(3.0))  # Ok((1, "a", 3.0))
-            Ok(1).zip(Err("bad"))        # Err("bad")
         """
         values: list[Any] = [self._value]
         for r in results:
@@ -371,23 +533,49 @@ class Ok(Generic[T_co]):
                     return r
         return Ok(tuple(values))
 
-class _DoError(Exception):
+    def flatten(self: Ok[Result[U, F]]) -> Result[U, F]:
+        """
+        Remove one level of ``Result`` nesting.
 
-    """Signal to ``do()`` that the result is an ``Err``, short-circuiting the generator."""
+        Convert ``Result[Result[U, F], E]`` into ``Result[U, F]``.
+        Only one level is removed — ``Ok(Ok(Ok(1))).flatten()`` is ``Ok(Ok(1))``.
+
+        Example:
+            >>> Ok(Ok(1)).flatten()
+            Ok(1)
+            >>> Ok(Err("bad")).flatten()
+            Err('bad')
+
+        """
+        return self._value
+
+
+class DoError(Exception):
+    """
+    Signal to ``do()`` that the result is an ``Err``, short-circuiting the generator.
+
+    Raised by ``Err.__iter__``. If you see this exception outside ``do()`` /
+    ``do_async()``, you iterated an ``Err`` directly (e.g. ``list(Err(...))``,
+    ``for x in err``) — ``Result`` values are not general-purpose iterables.
+    """
 
     def __init__(self, err: Err[Any]) -> None:
         self.err: Err[Any] = err
+        super().__init__(
+            "Err is only iterable inside do() notation; "
+            "use pattern matching or combinators to access the error value",
+        )
 
 
 def _err_do_iter(err: Err[Any]) -> Iterator[NoReturn]:
     """
-    Raise ``_DoError`` to short-circuit ``do()`` / ``do_async()`` generators.
+    Raise ``DoError`` to short-circuit ``do()`` / ``do_async()`` generators.
 
     This yield is syntactically required to make the function a generator,
-    but it is never reached because ``_DoError`` is always raised first.
+    but it is never reached because ``DoError`` is always raised first.
     """
-    raise _DoError(err)
-    # SAFETY: This `yield` is unreachable at runtime — `_DoError` is always raised
+    raise DoError(err)
+    # SAFETY: This `yield` is unreachable at runtime — `DoError` is always raised
     # above. It exists solely to make Python treat this function as a generator
     # (required by the `do()` / `do_async()` machinery which expects a generator
     # protocol). Without it, the function would be a plain callable and the `yield
@@ -396,17 +584,29 @@ def _err_do_iter(err: Err[Any]) -> Iterator[NoReturn]:
 
 
 class Err(Generic[E_co]):
-
     """An ``Err`` value signifying failure, storing arbitrary data for the error."""
 
     __match_args__ = ("err_value",)
     __slots__ = ("_value",)
 
+    _value: E_co
+
     def __iter__(self) -> Iterator[NoReturn]:
         return _err_do_iter(self)
 
     def __init__(self, value: E_co) -> None:
-        self._value = value
+        object.__setattr__(self, "_value", value)
+
+    def __setattr__(self, name: str, value: object) -> NoReturn:
+        msg = "Err is immutable"
+        raise AttributeError(msg)
+
+    def __delattr__(self, name: str) -> NoReturn:
+        msg = "Err is immutable"
+        raise AttributeError(msg)
+
+    def __reduce__(self) -> tuple[Callable[[E_co], Err[E_co]], tuple[E_co]]:
+        return (Err, (self._value,))
 
     def __repr__(self) -> str:
         return f"Err({self._value!r})"
@@ -417,12 +617,29 @@ class Err(Generic[E_co]):
     def __hash__(self) -> int:
         return hash((False, self._value))
 
+    def __bool__(self) -> NoReturn:
+        raise TypeError(_TRUTHINESS_MSG)
+
     def is_ok(self) -> Literal[False]:
-        """Return ``False`` because this is an ``Err`` value."""
+        """
+        Return ``False`` because this is an ``Err`` value.
+
+        Example:
+            >>> Err("boom").is_ok()
+            False
+
+        """
         return False
 
     def is_err(self) -> Literal[True]:
-        """Return ``True`` because this is an ``Err`` value."""
+        """
+        Return ``True`` because this is an ``Err`` value.
+
+        Example:
+            >>> Err("boom").is_err()
+            True
+
+        """
         return True
 
     def is_ok_and(self, _f: Callable[[T_co], bool]) -> Literal[False]:
@@ -430,6 +647,11 @@ class Err(Generic[E_co]):
         Return ``True`` if the result is ``Ok`` and the predicate *f* returns ``True``.
 
         Since this is ``Err``, always returns ``False``.
+
+        Example:
+            >>> Err("boom").is_ok_and(lambda x: True)
+            False
+
         """
         return False
 
@@ -442,7 +664,16 @@ class Err(Generic[E_co]):
         return False
 
     def is_err_and(self, f: Callable[[E_co], bool]) -> bool:
-        """Return ``True`` if the result is ``Err`` and the predicate *f* returns ``True``."""
+        """
+        Return ``True`` if the result is ``Err`` and the predicate *f* returns ``True``.
+
+        Example:
+            >>> Err("boom").is_err_and(lambda e: "boo" in e)
+            True
+            >>> Err("boom").is_err_and(lambda e: e == "x")
+            False
+
+        """
         return f(self._value)
 
     async def is_err_and_async(self, f: Callable[[E_co], Awaitable[bool]]) -> bool:
@@ -454,6 +685,11 @@ class Err(Generic[E_co]):
         Convert from ``Result[T, E]`` to ``T | None``.
 
         Return ``None``, discarding the error value.
+
+        Example:
+            >>> Err("boom").ok() is None
+            True
+
         """
         return
 
@@ -462,12 +698,24 @@ class Err(Generic[E_co]):
         Convert from ``Result[T, E]`` to ``E | None``.
 
         Return the contained ``Err`` value, discarding the success value, if any.
+
+        Example:
+            >>> Err("boom").err()
+            'boom'
+
         """
         return self._value
 
     @property
     def err_value(self) -> E_co:
-        """The contained ``Err`` value."""
+        """
+        The contained ``Err`` value.
+
+        Example:
+            >>> Err("boom").err_value
+            'boom'
+
+        """
         return self._value
 
     def expect(self, message: str) -> NoReturn:
@@ -477,6 +725,12 @@ class Err(Generic[E_co]):
         Raises:
             UnwrapError: Always, because this is an ``Err`` value, with a
                 message including the passed *message* and the ``Err`` content.
+
+        Example:
+            >>> Err("boom").expect("must exist")
+            Traceback (most recent call last):
+                ...
+            corrode.result.UnwrapError: must exist: 'boom'
 
         """
         exc = UnwrapError(
@@ -496,6 +750,10 @@ class Err(Generic[E_co]):
         Raises:
             UnwrapError: Never raised for ``Err``.
 
+        Example:
+            >>> Err("boom").expect_err("wanted an error")
+            'boom'
+
         """
         return self._value
 
@@ -506,6 +764,12 @@ class Err(Generic[E_co]):
         Raises:
             UnwrapError: Always, because this is an ``Err`` value, with a
                 message provided by the ``Err`` content.
+
+        Example:
+            >>> Err("boom").unwrap()
+            Traceback (most recent call last):
+                ...
+            corrode.result.UnwrapError: Called `Result.unwrap()` on an `Err` value: 'boom'
 
         """
         exc = UnwrapError(
@@ -525,6 +789,10 @@ class Err(Generic[E_co]):
         Raises:
             UnwrapError: Never raised for ``Err``.
 
+        Example:
+            >>> Err("boom").unwrap_err()
+            'boom'
+
         """
         return self._value
 
@@ -533,6 +801,11 @@ class Err(Generic[E_co]):
         Return the contained ``Ok`` value or a provided default.
 
         The contained ``Err`` value is discarded.
+
+        Example:
+            >>> Err("boom").unwrap_or(0)
+            0
+
         """
         return default
 
@@ -541,6 +814,11 @@ class Err(Generic[E_co]):
         Return the contained ``Ok`` value or compute it from a callable.
 
         The callable *op* is applied to the contained ``Err`` value.
+
+        Example:
+            >>> Err("boom").unwrap_or_else(len)
+            4
+
         """
         return op(self._value)
 
@@ -557,6 +835,13 @@ class Err(Generic[E_co]):
         Return the contained ``Ok`` value or raise the provided exception.
 
         The exception *e* is instantiated with the ``Err`` value and raised.
+
+        Example:
+            >>> Err("boom").unwrap_or_raise(ValueError)
+            Traceback (most recent call last):
+                ...
+            ValueError: boom
+
         """
         raise e(self._value)
 
@@ -565,6 +850,11 @@ class Err(Generic[E_co]):
         Apply *op* to the contained ``Ok`` value.
 
         Map a ``Result[T, E]`` to ``Result[U, E]``, leaving an ``Err`` value untouched.
+
+        Example:
+            >>> Err("boom").map(lambda x: x * 10)
+            Err('boom')
+
         """
         return self
 
@@ -581,6 +871,11 @@ class Err(Generic[E_co]):
         Apply *op* to the contained ``Ok`` value, or return *default* if ``Err``.
 
         Since this is ``Err``, *op* is ignored and *default* is returned.
+
+        Example:
+            >>> Err("boom").map_or(0, lambda x: x * 10)
+            0
+
         """
         return default
 
@@ -597,6 +892,11 @@ class Err(Generic[E_co]):
         Apply *op* to a contained ``Ok`` value, or *default_op* to a contained ``Err``.
 
         Map a ``Result[T, E]`` to ``U``.
+
+        Example:
+            >>> Err("boom").map_or_else(len, lambda x: x * 10)
+            4
+
         """
         return default_op(self._value)
 
@@ -617,6 +917,11 @@ class Err(Generic[E_co]):
         Apply *op* to a contained ``Err`` value, leaving ``Ok`` untouched.
 
         Map a ``Result[T, E]`` to ``Result[T, F]``.
+
+        Example:
+            >>> Err("boom").map_err(str.upper)
+            Err('BOOM')
+
         """
         return Err(op(self._value))
 
@@ -633,6 +938,11 @@ class Err(Generic[E_co]):
         Call *op* if the result is ``Ok``, otherwise return the ``Err`` value of *self*.
 
         This function can be used for control flow based on ``Result`` values.
+
+        Example:
+            >>> Err("boom").and_then(lambda x: Ok(x * 10))
+            Err('boom')
+
         """
         return self
 
@@ -649,6 +959,11 @@ class Err(Generic[E_co]):
         Call *op* if the result is ``Err``, otherwise return the ``Ok`` value of *self*.
 
         Since this is ``Err``, *op* is called with the error value.
+
+        Example:
+            >>> Err("boom").or_else(lambda e: Ok(len(e)))
+            Ok(4)
+
         """
         return op(self._value)
 
@@ -668,6 +983,11 @@ class Err(Generic[E_co]):
         Call *op* with the contained value if ``Ok``.
 
         Return the original result unchanged. Since this is ``Err``, *op* is not called.
+
+        Example:
+            >>> Err("boom").inspect(print)
+            Err('boom')
+
         """
         return self
 
@@ -684,6 +1004,12 @@ class Err(Generic[E_co]):
         Call *op* with the contained error if ``Err``.
 
         Return the original result unchanged.
+
+        Example:
+            >>> Err("boom").inspect_err(print)
+            boom
+            Err('boom')
+
         """
         op(self._value)
         return self
@@ -707,10 +1033,25 @@ class Err(Generic[E_co]):
 
         Since this is an ``Err``, always returns ``self`` without inspecting the others.
 
-        Example::
+        Example:
+            >>> Err("bad").zip(Ok(1))
+            Err('bad')
+            >>> Err("bad").zip(Ok(1), Ok(2))
+            Err('bad')
 
-            Err("bad").zip(Ok(1))        # Err("bad")
-            Err("bad").zip(Ok(1), Ok(2)) # Err("bad")
+        """
+        return self
+
+    def flatten(self) -> Err[E_co]:
+        """
+        Remove one level of ``Result`` nesting.
+
+        Since this is an ``Err``, there is nothing to flatten — ``self`` is returned.
+
+        Example:
+            >>> Err("bad").flatten()
+            Err('bad')
+
         """
         return self
 
@@ -724,7 +1065,6 @@ have been implemented, only the ones that make sense in the Python context.
 
 
 class UnwrapError(Exception):
-
     """
     Exception raised from ``.unwrap_<...>`` and ``.expect_<...>`` calls.
 
@@ -748,24 +1088,37 @@ class UnwrapError(Exception):
 
 
 def as_result(
-    *exceptions: type[TBE],
-) -> Callable[[Callable[P, R]], Callable[P, Result[R, TBE]]]:
+    *exceptions: type[TE],
+) -> Callable[[Callable[P, R]], Callable[P, Result[R, TE]]]:
     """
     Make a decorator to turn a function into one that returns a ``Result``.
 
     Regular return values are turned into ``Ok(return_value)``. Raised
     exceptions of the specified exception type(s) are turned into ``Err(exc)``.
+
+    Only subclasses of ``Exception`` are accepted. ``BaseException``-only types
+    (``KeyboardInterrupt``, ``SystemExit``, ``asyncio.CancelledError``) must
+    propagate — swallowing them breaks interrupts and task cancellation.
+
+    Example:
+        >>> @as_result(ValueError)
+        ... def parse(s: str) -> int:
+        ...     return int(s)
+        >>> parse("42")
+        Ok(42)
+        >>> parse("x").map_err(type)
+        Err(<class 'ValueError'>)
+
     """
     if not exceptions or not all(
-        inspect.isclass(exception) and issubclass(exception, BaseException)
-        for exception in exceptions
+        inspect.isclass(exception) and issubclass(exception, Exception) for exception in exceptions
     ):
-        msg = "as_result() requires one or more exception types"
+        msg = "as_result() requires one or more exception types (subclasses of Exception)"
         raise TypeError(msg)
 
-    def decorator(f: Callable[P, R]) -> Callable[P, Result[R, TBE]]:
+    def decorator(f: Callable[P, R]) -> Callable[P, Result[R, TE]]:
         @functools.wraps(f)
-        def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[R, TBE]:
+        def wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[R, TE]:
             try:
                 return Ok(f(*args, **kwargs))
             except exceptions as exc:
@@ -777,26 +1130,29 @@ def as_result(
 
 
 def as_async_result(
-    *exceptions: type[TBE],
-) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Coroutine[object, object, Result[R, TBE]]]]:
+    *exceptions: type[TE],
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Coroutine[object, object, Result[R, TE]]]]:
     """
     Make a decorator to turn an async function into one that returns a ``Result``.
 
     Regular return values are turned into ``Ok(return_value)``. Raised
     exceptions of the specified exception type(s) are turned into ``Err(exc)``.
+
+    Only subclasses of ``Exception`` are accepted. ``BaseException``-only types
+    (``KeyboardInterrupt``, ``SystemExit``, ``asyncio.CancelledError``) must
+    propagate — swallowing them breaks interrupts and task cancellation.
     """
     if not exceptions or not all(
-        inspect.isclass(exception) and issubclass(exception, BaseException)
-        for exception in exceptions
+        inspect.isclass(exception) and issubclass(exception, Exception) for exception in exceptions
     ):
-        msg = "as_async_result() requires one or more exception types"
+        msg = "as_async_result() requires one or more exception types (subclasses of Exception)"
         raise TypeError(msg)
 
     def decorator(
         f: Callable[P, Awaitable[R]],
-    ) -> Callable[P, Coroutine[object, object, Result[R, TBE]]]:
+    ) -> Callable[P, Coroutine[object, object, Result[R, TE]]]:
         @functools.wraps(f)
-        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[R, TBE]:
+        async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> Result[R, TE]:
             try:
                 return Ok(await f(*args, **kwargs))
             except exceptions as exc:
@@ -815,6 +1171,46 @@ def as_async_result(
     return decorator
 
 
+def from_optional(value: U | None, error: F) -> Result[U, F]:
+    """
+    Convert ``T | None`` into ``Result[T, F]``.
+
+    ``None`` becomes ``Err(error)``; any other value becomes ``Ok(value)``.
+    This is the bridge from the idiomatic Python "optional" pattern into
+    ``Result``. Note that ``Ok(None)`` cannot be produced — if ``None`` is a
+    valid success value for you, construct the ``Result`` explicitly.
+
+    Example:
+        >>> from_optional(42, "missing")
+        Ok(42)
+        >>> from_optional(None, "missing")
+        Err('missing')
+
+    """
+    if value is None:
+        return Err(error)
+    return Ok(value)
+
+
+def from_optional_or_else(value: U | None, error_fn: Callable[[], F]) -> Result[U, F]:
+    """
+    Convert ``T | None`` into ``Result[T, F]``, computing the error lazily.
+
+    Like ``from_optional``, but *error_fn* is only called when *value* is
+    ``None`` — use it when constructing the error is expensive.
+
+    Example:
+        >>> from_optional_or_else(42, lambda: "missing")
+        Ok(42)
+        >>> from_optional_or_else(None, lambda: "missing")
+        Err('missing')
+
+    """
+    if value is None:
+        return Err(error_fn())
+    return Ok(value)
+
+
 def is_ok(result: Result[T_co, E_co]) -> TypeIs[Ok[T_co]]:
     """
     Check whether *result* is ``Ok`` (typeguard).
@@ -823,9 +1219,16 @@ def is_ok(result: Result[T_co, E_co]) -> TypeIs[Ok[T_co]]:
 
         r: Result[int, str] = get_a_result()
         if is_ok(r):
-            r   # r is of type Ok[int]
+            r  # r is of type Ok[int]
         elif is_err(r):
-            r   # r is of type Err[str]
+            r  # r is of type Err[str]
+
+    Example:
+        >>> is_ok(Ok(1))
+        True
+        >>> is_ok(Err("boom"))
+        False
+
     """
     return result.is_ok()
 
@@ -838,9 +1241,16 @@ def is_err(result: Result[T_co, E_co]) -> TypeIs[Err[E_co]]:
 
         r: Result[int, str] = get_a_result()
         if is_ok(r):
-            r   # r is of type Ok[int]
+            r  # r is of type Ok[int]
         elif is_err(r):
-            r   # r is of type Err[str]
+            r  # r is of type Err[str]
+
+    Example:
+        >>> is_err(Err("boom"))
+        True
+        >>> is_err(Ok(1))
+        False
+
     """
     return result.is_err()
 
@@ -867,27 +1277,29 @@ def do(gen: Generator[Result[T_co, E_co], None, None]) -> Result[T_co, E_co]:
     Usage::
 
         final_result: Result[float, int] = do(
-            Ok(len(x) + int(y) + 0.5)
-            for x in Ok("hello")
-            for y in Ok(True)
+            Ok(len(x) + int(y) + 0.5) for x in Ok("hello") for y in Ok(True)
         )
 
     NOTE: If you exclude the type annotation e.g. ``Result[float, int]``
     your type checker might be unable to infer the return type.
     To avoid an error, you might need to help it with the type hint.
     """
+    warnings.warn(
+        "do() is deprecated: the required type annotation is not checked by "
+        "type checkers. Prefer match, and_then() chains, or zip().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    if isinstance(gen, AsyncGenerator):
+        msg = (
+            "Got async_generator but expected generator. "
+            "Use do_async() — see the section on do notation in the README."
+        )
+        raise TypeError(msg)
     try:
         return next(gen)
-    except _DoError as e:
+    except DoError as e:
         return cast("Err[E_co]", e.err)
-    except TypeError as te:
-        if "'async_generator' object is not an iterator" in str(te):
-            msg = (
-                "Got async_generator but expected generator."
-                "See the section on do notation in the README."
-            )
-            raise TypeError(msg) from te
-        raise
 
 
 async def do_async(
@@ -917,6 +1329,8 @@ async def do_async(
 
         # This is a regular generator:
         async def foo(): ...
+
+
         do(Ok(1) for x in await foo())
 
     ::
@@ -924,11 +1338,9 @@ async def do_async(
         # But this is an async generator:
         async def foo(): ...
         async def bar(): ...
-        do(
-            Ok(1)
-            for x in await foo()
-            for y in await bar()
-        )
+
+
+        do(Ok(1) for x in await foo() for y in await bar())
 
     We let users try to use regular ``do()``, which works in some cases
     of awaiting async values. If we hit a case like above, we raise
@@ -939,6 +1351,8 @@ async def do_async(
     regular generators, as you get in the first case::
 
         async def foo(): ...
+
+
         do(Ok(1) for x in await foo())
 
     Furthermore, neither mypy nor pyright can infer that the second case is
@@ -946,9 +1360,15 @@ async def do_async(
     as accepting only an async generator. This is additional motivation
     to accept either.
     """
+    warnings.warn(
+        "do_async() is deprecated: the required type annotation is not checked "
+        "by type checkers. Prefer match, and_then_async() chains, or zip().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
         if isinstance(gen, AsyncGenerator):
             return await gen.__anext__()
         return next(gen)
-    except _DoError as e:
+    except DoError as e:
         return cast("Err[E_co]", e.err)

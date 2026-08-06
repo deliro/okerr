@@ -2,6 +2,7 @@
 
 from . import async_iterator, iterator
 from .result import (
+    DoError,
     Err,
     Ok,
     Result,
@@ -10,11 +11,14 @@ from .result import (
     as_result,
     do,
     do_async,
+    from_optional,
+    from_optional_or_else,
     is_err,
     is_ok,
 )
 
 __all__ = [
+    "DoError",
     "Err",
     "Ok",
     "Result",
@@ -24,6 +28,8 @@ __all__ = [
     "async_iterator",
     "do",
     "do_async",
+    "from_optional",
+    "from_optional_or_else",
     "is_err",
     "is_ok",
     "iterator",
