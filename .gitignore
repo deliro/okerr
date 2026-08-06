@@ -12,3 +12,4 @@ build/
 venv/
 .vscode
 pyrightconfig.json
+site/

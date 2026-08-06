@@ -1,0 +1,51 @@
+site_name: corrode
+site_description: A Rust-like Result type for Python, fully type annotated
+site_url: https://deliro.github.io/corrode/
+repo_url: https://github.com/deliro/corrode
+repo_name: deliro/corrode
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - content.code.copy
+    - navigation.sections
+    - toc.integrate
+
+nav:
+  - Overview: index.md
+  - API:
+      - Result: api/result.md
+      - Iterator utilities: api/iterator.md
+      - Async iterator utilities: api/async-iterator.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - pymdownx.snippets:
+      check_paths: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            show_source: true
+            members_order: source
+            filters: ["!^_"]
