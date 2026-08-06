@@ -4,6 +4,9 @@ import pytest
 
 from corrode import Err, Ok, Result, do, do_async
 
+# do() / do_async() are deprecated by design; these tests exercise them anyway
+pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning")
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -73,6 +76,24 @@ class TestDo:
 
         with pytest.raises(TypeError, match="something else"):
             do(bad_gen())
+
+
+# ---------------------------------------------------------------------------
+# Runtime deprecation
+# ---------------------------------------------------------------------------
+
+
+class TestDeprecation:
+    def test_do_warns(self) -> None:
+        with pytest.warns(DeprecationWarning, match=r"do\(\) is deprecated"):
+            result: Result[int, int] = do(Ok(len(x)) for x in _resx(True))
+        assert result == Ok(5)
+
+    @pytest.mark.asyncio
+    async def test_do_async_warns(self) -> None:
+        with pytest.warns(DeprecationWarning, match=r"do_async\(\) is deprecated"):
+            result: Result[int, str] = await do_async(Ok(len(x)) for x in await _aresx(True))
+        assert result == Ok(5)
 
 
 # ---------------------------------------------------------------------------

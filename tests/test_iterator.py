@@ -3,9 +3,11 @@ from __future__ import annotations
 from corrode import Err, Ok, Result
 from corrode.iterator import (
     collect,
+    collect_all,
     filter_err,
     filter_ok,
     map_collect,
+    map_partition,
     partition,
     try_reduce,
 )
@@ -82,6 +84,67 @@ class TestMapCollect:
 
     def test_generator_input(self) -> None:
         assert map_collect((str(x) for x in range(3)), _parse) == Ok([0, 1, 2])
+
+
+# ---------------------------------------------------------------------------
+# collect_all
+# ---------------------------------------------------------------------------
+
+
+class TestCollectAll:
+    def test_all_ok(self) -> None:
+        assert collect_all([Ok(1), Ok(2), Ok(3)]) == Ok([1, 2, 3])
+
+    def test_empty(self) -> None:
+        assert collect_all([]) == Ok([])
+
+    def test_accumulates_all_errors(self) -> None:
+        assert collect_all([Ok(1), Err("a"), Ok(2), Err("b")]) == Err(["a", "b"])
+
+    def test_never_short_circuits(self) -> None:
+        consumed = 0
+
+        def tracked():
+            nonlocal consumed
+            for r in [Ok(1), Err("a"), Ok(2)]:
+                consumed += 1
+                yield r
+
+        assert collect_all(tracked()) == Err(["a"])
+        assert consumed == 3
+
+    def test_ok_values_dropped_on_error(self) -> None:
+        # all-or-nothing: Ok values are not observable when any Err is present
+        assert collect_all([Ok(1), Err("a")]) == Err(["a"])
+
+
+# ---------------------------------------------------------------------------
+# map_partition
+# ---------------------------------------------------------------------------
+
+
+class TestMapPartition:
+    def test_mixed(self) -> None:
+        oks, errs = map_partition(["1", "x", "3", "y"], _parse)
+        assert oks == [1, 3]
+        assert errs == ["not a number: 'x'", "not a number: 'y'"]
+
+    def test_empty(self) -> None:
+        assert map_partition([], _parse) == ([], [])
+
+    def test_all_ok(self) -> None:
+        assert map_partition(["1", "2"], _parse) == ([1, 2], [])
+
+    def test_consumes_all_elements(self) -> None:
+        calls = 0
+
+        def counting_parse(s: str) -> Result[int, str]:
+            nonlocal calls
+            calls += 1
+            return _parse(s)
+
+        map_partition(["1", "x", "3"], counting_parse)
+        assert calls == 3
 
 
 # ---------------------------------------------------------------------------

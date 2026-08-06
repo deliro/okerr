@@ -1,17 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
+from typing import TypeVar
 
 import pytest
 
 from corrode import Err, Ok
 from corrode.async_iterator import (
     collect,
+    collect_all,
     filter_err,
     filter_err_unordered,
     filter_ok,
     filter_ok_unordered,
     map_collect,
+    map_partition,
     partition,
     try_reduce,
 )
@@ -25,6 +29,41 @@ async def ok_after(value: int, delay: float = 0.0) -> Ok[int]:
 async def err_after(value: str, delay: float = 0.0) -> Err[str]:
     await asyncio.sleep(delay)
     return Err(value)
+
+
+_R = TypeVar("_R")
+
+
+class ConcurrencyProbe:
+    """Track the peak number of concurrently running awaitables."""
+
+    def __init__(self) -> None:
+        self._in_flight = 0
+        self.peak = 0
+
+    async def track(self, result: _R) -> _R:
+        self._in_flight += 1
+        self.peak = max(self.peak, self._in_flight)
+        # yield long enough for the window to fill up; the assertion is on
+        # the logical peak, not on wall-clock timing
+        await asyncio.sleep(0.02)
+        self._in_flight -= 1
+        return result
+
+
+class Rendezvous:
+    """Deadlock (until timeout) unless *expected* coroutines run concurrently."""
+
+    def __init__(self, expected: int) -> None:
+        self._remaining = expected
+        self._all_started = asyncio.Event()
+
+    async def wait_all_started(self, result: _R) -> _R:
+        self._remaining -= 1
+        if self._remaining == 0:
+            self._all_started.set()
+        await self._all_started.wait()
+        return result
 
 
 # ---------------------------------------------------------------------------
@@ -49,10 +88,12 @@ class TestCollectBasic:
 
     async def test_first_err_returned(self) -> None:
         # both fail, first to complete wins
-        result = await collect([
-            err_after("first", delay=0.0),
-            err_after("second", delay=0.1),
-        ])
+        result = await collect(
+            [
+                err_after("first", delay=0.0),
+                err_after("second", delay=0.1),
+            ],
+        )
         assert result == Err("first")
 
     async def test_err_among_oks(self) -> None:
@@ -67,22 +108,16 @@ class TestCollectBasic:
 
 class TestConcurrencyUnlimited:
     async def test_all_scheduled_at_once(self) -> None:
-        # all tasks have the same delay — if they run concurrently total time ~delay,
-        # not N*delay
-        started_at: list[float] = []
+        # each coroutine blocks until all 5 have started —
+        # deadlocks (and hits the timeout) unless they truly run concurrently
+        rendezvous = Rendezvous(5)
 
-        async def tracked(v: int) -> Ok[int]:
-            started_at.append(asyncio.get_event_loop().time())
-            await asyncio.sleep(0.05)
-            return Ok(v)
-
-        result = await collect(
-            [tracked(i) for i in range(5)],
-            concurrency=None,
-        )
+        async with asyncio.timeout(5):
+            result = await collect(
+                [rendezvous.wait_all_started(Ok(i)) for i in range(5)],
+                concurrency=None,
+            )
         assert result == Ok([0, 1, 2, 3, 4])
-        # all tasks started within a small window (< 0.02s)
-        assert max(started_at) - min(started_at) < 0.02
 
     async def test_empty(self) -> None:
         assert await collect([], concurrency=None) == Ok([])
@@ -168,21 +203,12 @@ class TestConcurrencyN:
         assert result == Ok(list(range(10)))
 
     async def test_at_most_n_concurrent(self) -> None:
-        in_flight: list[int] = []
-        peak: list[int] = []
-
-        async def tracked(v: int) -> Ok[int]:
-            in_flight.append(v)
-            peak.append(len(in_flight))
-            await asyncio.sleep(0.02)
-            in_flight.remove(v)
-            return Ok(v)
-
+        probe = ConcurrencyProbe()
         await collect(
-            [tracked(i) for i in range(8)],
+            [probe.track(Ok(i)) for i in range(8)],
             concurrency=3,
         )
-        assert max(peak) <= 3
+        assert probe.peak <= 3
 
     async def test_err_cancels_pending_window(self) -> None:
         cancelled: list[int] = []
@@ -241,11 +267,13 @@ class TestConcurrencyN:
 class TestOrderGuarantee:
     async def test_order_preserved_with_different_delays(self) -> None:
         # tasks complete in reverse order but result must be in input order
-        result = await collect([
-            ok_after(1, delay=0.1),
-            ok_after(2, delay=0.05),
-            ok_after(3, delay=0.0),
-        ])
+        result = await collect(
+            [
+                ok_after(1, delay=0.1),
+                ok_after(2, delay=0.05),
+                ok_after(3, delay=0.0),
+            ],
+        )
         assert result == Ok([1, 2, 3])
 
     async def test_order_preserved_with_concurrency(self) -> None:
@@ -257,12 +285,14 @@ class TestOrderGuarantee:
 
     async def test_partition_order_preserved(self) -> None:
         # interleaved ok/err with different delays
-        oks, errs = await partition([
-            ok_after(1, delay=0.1),
-            err_after("a", delay=0.0),
-            ok_after(2, delay=0.05),
-            err_after("b", delay=0.08),
-        ])
+        oks, errs = await partition(
+            [
+                ok_after(1, delay=0.1),
+                err_after("a", delay=0.0),
+                ok_after(2, delay=0.05),
+                err_after("b", delay=0.08),
+            ],
+        )
         assert oks == [1, 2]
         assert errs == ["a", "b"]
 
@@ -273,12 +303,15 @@ class TestOrderGuarantee:
 
 
 class TestExceptionPropagation:
-    async def test_exception_escapes(self) -> None:
+    async def test_exception_escapes_as_group_of_one(self) -> None:
+        # one failure is a group of one — the caught type never depends on timing
         async def boom() -> Ok[int]:
             raise ValueError("oops")
 
-        with pytest.raises(ValueError, match="oops"):
+        with pytest.raises(BaseExceptionGroup) as exc_info:
             await collect([boom()])
+        assert exc_info.group_contains(ValueError, match="oops")
+        assert len(exc_info.value.exceptions) == 1
 
     async def test_exception_cancels_pending(self) -> None:
         cancelled: list[int] = []
@@ -294,9 +327,10 @@ class TestExceptionPropagation:
         async def boom() -> Ok[int]:
             raise RuntimeError("boom")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(BaseExceptionGroup) as exc_info:
             await collect([slow(1), slow(2), boom()])
 
+        assert exc_info.group_contains(RuntimeError, match="boom")
         assert sorted(cancelled) == [1, 2]
 
     async def test_exception_closes_unconsumed_coros(self) -> None:
@@ -310,19 +344,69 @@ class TestExceptionPropagation:
             await asyncio.sleep(10)
             return Ok(v)
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(BaseExceptionGroup):
             await collect([boom(), never(1), never(2)], concurrency=1)
 
         # with concurrency=1, never(1) and never(2) were never scheduled
         assert started == []
 
     async def test_exception_not_swallowed_when_err_also_present(self) -> None:
-        # if one task raises and another returns Err, the exception wins
+        # if one task raises and another returns Err in the same batch, the exception wins
         async def boom() -> Ok[int]:
             raise RuntimeError("exception")
 
-        with pytest.raises(RuntimeError, match="exception"):
-            await collect([boom(), boom()], concurrency=None)
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await collect([boom(), err_after("also bad")], concurrency=None)
+        assert exc_info.group_contains(RuntimeError, match="exception")
+
+    async def test_multiple_exceptions_raise_group(self) -> None:
+        # several tasks raising in the same batch propagate together, none discarded
+        async def boom(msg: str) -> Ok[int]:
+            raise RuntimeError(msg)
+
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await collect([boom("one"), boom("two")], concurrency=None)
+
+        messages = sorted(str(e) for e in exc_info.value.exceptions)
+        assert messages == ["one", "two"]
+
+    async def test_teardown_exception_joins_group(self) -> None:
+        # a task that raises during cancellation must not be silently discarded
+        async def bad_on_cancel(v: int) -> Ok[int]:
+            try:
+                await asyncio.sleep(10)
+            except asyncio.CancelledError:
+                msg = f"cleanup failed: {v}"
+                raise RuntimeError(msg) from None
+            return Ok(v)
+
+        async def boom() -> Ok[int]:
+            raise ValueError("primary")
+
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await collect([bad_on_cancel(1), boom()])
+
+        names = sorted(type(e).__name__ for e in exc_info.value.exceptions)
+        assert names == ["RuntimeError", "ValueError"]
+
+    async def test_cancelling_collect_cancels_children(self) -> None:
+        # cancelling the caller's task must not leak the inner tasks
+        cancelled: list[int] = []
+
+        async def slow(v: int) -> Ok[int]:
+            try:
+                await asyncio.sleep(10)
+                return Ok(v)
+            except asyncio.CancelledError:
+                cancelled.append(v)
+                raise
+
+        task = asyncio.create_task(collect([slow(1), slow(2)]))
+        await asyncio.sleep(0.01)
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert sorted(cancelled) == [1, 2]
 
 
 # ---------------------------------------------------------------------------
@@ -388,9 +472,14 @@ class TestPartition:
         assert errs == ["0", "1", "2"]
 
     async def test_mixed(self) -> None:
-        oks, errs = await partition([
-            ok_after(1), err_after("a"), ok_after(2), err_after("b"),
-        ])
+        oks, errs = await partition(
+            [
+                ok_after(1),
+                err_after("a"),
+                ok_after(2),
+                err_after("b"),
+            ],
+        )
         assert oks == [1, 2]
         assert errs == ["a", "b"]
 
@@ -408,20 +497,16 @@ class TestPartition:
         assert sorted(completed) == [1, 2, 3]
 
     async def test_concurrency_none(self) -> None:
-        started_at: list[float] = []
+        # deadlocks (and hits the timeout) unless all 5 run concurrently
+        rendezvous = Rendezvous(5)
 
-        async def tracked(v: int) -> Ok[int]:
-            started_at.append(asyncio.get_event_loop().time())
-            await asyncio.sleep(0.05)
-            return Ok(v)
-
-        oks, errs = await partition(
-            [tracked(i) for i in range(5)],
-            concurrency=None,
-        )
+        async with asyncio.timeout(5):
+            oks, errs = await partition(
+                [rendezvous.wait_all_started(Ok(i)) for i in range(5)],
+                concurrency=None,
+            )
         assert oks == list(range(5))
         assert errs == []
-        assert max(started_at) - min(started_at) < 0.02
 
     async def test_concurrency_one(self) -> None:
         order: list[int] = []
@@ -438,21 +523,12 @@ class TestPartition:
         assert order == [0, 1, 2, 3]
 
     async def test_concurrency_n_at_most(self) -> None:
-        in_flight: list[int] = []
-        peak: list[int] = []
-
-        async def tracked(v: int) -> Ok[int]:
-            in_flight.append(v)
-            peak.append(len(in_flight))
-            await asyncio.sleep(0.02)
-            in_flight.remove(v)
-            return Ok(v)
-
+        probe = ConcurrencyProbe()
         await partition(
-            [tracked(i) for i in range(8)],
+            [probe.track(Ok(i)) for i in range(8)],
             concurrency=3,
         )
-        assert max(peak) <= 3
+        assert probe.peak <= 3
 
     async def test_with_tasks(self) -> None:
         tasks = [asyncio.create_task(ok_after(i)) for i in range(3)]
@@ -464,8 +540,9 @@ class TestPartition:
         async def boom() -> Ok[int]:
             raise RuntimeError("oops")
 
-        with pytest.raises(RuntimeError, match="oops"):
+        with pytest.raises(BaseExceptionGroup) as exc_info:
             await partition([boom(), ok_after(1)])
+        assert exc_info.group_contains(RuntimeError, match="oops")
 
     async def test_exception_cancels_pending(self) -> None:
         cancelled: list[int] = []
@@ -481,18 +558,17 @@ class TestPartition:
         async def boom() -> Ok[int]:
             raise RuntimeError("boom")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(BaseExceptionGroup):
             await partition([slow(1), slow(2), boom()])
 
         assert sorted(cancelled) == [1, 2]
 
     async def test_exception_drains_multiple_done(self) -> None:
-        # two tasks finish simultaneously — if one raises, the other's
-        # exception must be marked as retrieved to avoid warnings
+        # two tasks raise simultaneously — both are retrieved and propagate as a group
         async def boom() -> Ok[int]:
             raise RuntimeError("boom")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(BaseExceptionGroup):
             await partition([boom(), boom()], concurrency=None)
 
     async def test_exception_closes_unconsumed_coros(self) -> None:
@@ -506,7 +582,7 @@ class TestPartition:
             await asyncio.sleep(10)
             return Ok(v)
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(BaseExceptionGroup):
             await partition([boom(), never(1), never(2)], concurrency=1)
 
         assert started == []
@@ -547,24 +623,23 @@ class TestMapCollect:
         assert called == [0]
 
     async def test_concurrency_respected(self) -> None:
-        in_flight: list[int] = []
-        peak: list[int] = []
-
-        async def tracked(x: int) -> Ok[int]:
-            in_flight.append(x)
-            peak.append(len(in_flight))
-            await asyncio.sleep(0.02)
-            in_flight.remove(x)
-            return Ok(x)
-
-        await map_collect(range(8), tracked, concurrency=3)
-        assert max(peak) <= 3
+        probe = ConcurrencyProbe()
+        await map_collect(range(8), lambda x: probe.track(Ok(x)), concurrency=3)
+        assert probe.peak <= 3
 
     async def test_exception_propagates(self) -> None:
         async def boom(_x: int) -> Ok[int]:
             raise RuntimeError("oops")
 
-        with pytest.raises(RuntimeError, match="oops"):
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await map_collect([1, 2, 3], boom, concurrency=1)
+        assert exc_info.group_contains(RuntimeError, match="oops")
+
+    async def test_simultaneous_exceptions_raise_group(self) -> None:
+        async def boom(_x: int) -> Ok[int]:
+            raise RuntimeError("oops")
+
+        with pytest.raises(BaseExceptionGroup):
             await map_collect([1, 2, 3], boom)
 
     async def test_order_preserved(self) -> None:
@@ -602,27 +677,19 @@ class TestFilterOkUnordered:
         assert order == [2, 1]
 
     async def test_concurrency_respected(self) -> None:
-        in_flight: list[int] = []
-        peak: list[int] = []
-
-        async def tracked(v: int) -> Ok[int]:
-            in_flight.append(v)
-            peak.append(len(in_flight))
-            await asyncio.sleep(0.02)
-            in_flight.remove(v)
-            return Ok(v)
-
-        async for _ in filter_ok_unordered([tracked(i) for i in range(8)], concurrency=3):
+        probe = ConcurrencyProbe()
+        async for _ in filter_ok_unordered([probe.track(Ok(i)) for i in range(8)], concurrency=3):
             pass
-        assert max(peak) <= 3
+        assert probe.peak <= 3
 
     async def test_exception_propagates(self) -> None:
         async def boom() -> Ok[int]:
             raise RuntimeError("oops")
 
-        with pytest.raises(RuntimeError, match="oops"):
+        with pytest.raises(BaseExceptionGroup) as exc_info:
             async for _ in filter_ok_unordered([boom(), ok_after(1)]):
                 pass
+        assert exc_info.group_contains(RuntimeError, match="oops")
 
 
 # ---------------------------------------------------------------------------
@@ -652,27 +719,22 @@ class TestFilterErrUnordered:
         assert order == ["fast", "slow"]
 
     async def test_concurrency_respected(self) -> None:
-        in_flight: list[int] = []
-        peak: list[int] = []
-
-        async def tracked(v: int) -> Err[int]:
-            in_flight.append(v)
-            peak.append(len(in_flight))
-            await asyncio.sleep(0.02)
-            in_flight.remove(v)
-            return Err(v)
-
-        async for _ in filter_err_unordered([tracked(i) for i in range(8)], concurrency=3):
+        probe = ConcurrencyProbe()
+        async for _ in filter_err_unordered(
+            [probe.track(Err(i)) for i in range(8)],
+            concurrency=3,
+        ):
             pass
-        assert max(peak) <= 3
+        assert probe.peak <= 3
 
     async def test_exception_propagates(self) -> None:
         async def boom() -> Err[str]:
             raise RuntimeError("oops")
 
-        with pytest.raises(RuntimeError, match="oops"):
+        with pytest.raises(BaseExceptionGroup) as exc_info:
             async for _ in filter_err_unordered([boom(), err_after("x")]):
                 pass
+        assert exc_info.group_contains(RuntimeError, match="oops")
 
 
 # ---------------------------------------------------------------------------
@@ -682,56 +744,61 @@ class TestFilterErrUnordered:
 
 class TestFilterOk:
     async def test_yields_ok_values(self) -> None:
-        results = [v async for v in filter_ok(
-            [ok_after(1), err_after("x"), ok_after(2)], concurrency=4,
-        )]
+        results = [
+            v
+            async for v in filter_ok(
+                [ok_after(1), err_after("x"), ok_after(2)],
+                concurrency=4,
+            )
+        ]
         assert results == [1, 2]
 
     async def test_empty(self) -> None:
         assert [v async for v in filter_ok([], concurrency=4)] == []
 
     async def test_all_err_yields_nothing(self) -> None:
-        assert [v async for v in filter_ok(
-            [err_after("a"), err_after("b")], concurrency=4,
-        )] == []
+        assert [
+            v
+            async for v in filter_ok(
+                [err_after("a"), err_after("b")],
+                concurrency=4,
+            )
+        ] == []
 
     async def test_order_preserved(self) -> None:
         # fast completes before slow, but output must follow input order
         order: list[int] = []
         async for v in filter_ok(
-            [ok_after(1, delay=0.1), ok_after(2, delay=0.0)], concurrency=4,
+            [ok_after(1, delay=0.1), ok_after(2, delay=0.0)],
+            concurrency=4,
         ):
             order.append(v)
         assert order == [1, 2]
 
     async def test_err_skipped_in_order(self) -> None:
-        results = [v async for v in filter_ok(
-            [ok_after(1), err_after("x"), ok_after(3)], concurrency=4,
-        )]
+        results = [
+            v
+            async for v in filter_ok(
+                [ok_after(1), err_after("x"), ok_after(3)],
+                concurrency=4,
+            )
+        ]
         assert results == [1, 3]
 
     async def test_concurrency_respected(self) -> None:
-        in_flight: list[int] = []
-        peak: list[int] = []
-
-        async def tracked(v: int) -> Ok[int]:
-            in_flight.append(v)
-            peak.append(len(in_flight))
-            await asyncio.sleep(0.02)
-            in_flight.remove(v)
-            return Ok(v)
-
-        async for _ in filter_ok([tracked(i) for i in range(8)], concurrency=3):
+        probe = ConcurrencyProbe()
+        async for _ in filter_ok([probe.track(Ok(i)) for i in range(8)], concurrency=3):
             pass
-        assert max(peak) <= 3
+        assert probe.peak <= 3
 
     async def test_exception_propagates(self) -> None:
         async def boom() -> Ok[int]:
             raise RuntimeError("oops")
 
-        with pytest.raises(RuntimeError, match="oops"):
+        with pytest.raises(BaseExceptionGroup) as exc_info:
             async for _ in filter_ok([boom(), ok_after(1)], concurrency=4):
                 pass
+        assert exc_info.group_contains(RuntimeError, match="oops")
 
     async def test_concurrency_one_sequential(self) -> None:
         order: list[int] = []
@@ -753,55 +820,210 @@ class TestFilterOk:
 
 class TestFilterErr:
     async def test_yields_err_values(self) -> None:
-        results = [e async for e in filter_err(
-            [ok_after(1), err_after("x"), err_after("y")], concurrency=4,
-        )]
+        results = [
+            e
+            async for e in filter_err(
+                [ok_after(1), err_after("x"), err_after("y")],
+                concurrency=4,
+            )
+        ]
         assert results == ["x", "y"]
 
     async def test_empty(self) -> None:
         assert [e async for e in filter_err([], concurrency=4)] == []
 
     async def test_all_ok_yields_nothing(self) -> None:
-        assert [e async for e in filter_err(
-            [ok_after(1), ok_after(2)], concurrency=4,
-        )] == []
+        assert [
+            e
+            async for e in filter_err(
+                [ok_after(1), ok_after(2)],
+                concurrency=4,
+            )
+        ] == []
 
     async def test_order_preserved(self) -> None:
         order: list[str] = []
         async for e in filter_err(
-            [err_after("slow", delay=0.1), err_after("fast", delay=0.0)], concurrency=4,
+            [err_after("slow", delay=0.1), err_after("fast", delay=0.0)],
+            concurrency=4,
         ):
             order.append(e)
         assert order == ["slow", "fast"]
 
     async def test_ok_skipped_in_order(self) -> None:
-        results = [e async for e in filter_err(
-            [err_after("a"), ok_after(1), err_after("b")], concurrency=4,
-        )]
+        results = [
+            e
+            async for e in filter_err(
+                [err_after("a"), ok_after(1), err_after("b")],
+                concurrency=4,
+            )
+        ]
         assert results == ["a", "b"]
 
     async def test_concurrency_respected(self) -> None:
-        in_flight: list[int] = []
-        peak: list[int] = []
-
-        async def tracked(v: int) -> Err[int]:
-            in_flight.append(v)
-            peak.append(len(in_flight))
-            await asyncio.sleep(0.02)
-            in_flight.remove(v)
-            return Err(v)
-
-        async for _ in filter_err([tracked(i) for i in range(8)], concurrency=3):
+        probe = ConcurrencyProbe()
+        async for _ in filter_err([probe.track(Err(i)) for i in range(8)], concurrency=3):
             pass
-        assert max(peak) <= 3
+        assert probe.peak <= 3
 
     async def test_exception_propagates(self) -> None:
         async def boom() -> Err[str]:
             raise RuntimeError("oops")
 
-        with pytest.raises(RuntimeError, match="oops"):
+        with pytest.raises(BaseExceptionGroup) as exc_info:
             async for _ in filter_err([boom(), err_after("x")], concurrency=4):
                 pass
+        assert exc_info.group_contains(RuntimeError, match="oops")
+
+
+# ---------------------------------------------------------------------------
+# Early consumer exit (break / aclose) must not leak tasks
+# ---------------------------------------------------------------------------
+
+
+class TestEarlyConsumerExit:
+    async def _slow(self, v: int, cancelled: list[int]) -> Ok[int]:
+        try:
+            await asyncio.sleep(10)
+            return Ok(v)
+        except asyncio.CancelledError:
+            cancelled.append(v)
+            raise
+
+    async def test_filter_ok_unordered_break_cancels_pending(self) -> None:
+        cancelled: list[int] = []
+        agen = filter_ok_unordered(
+            [
+                ok_after(0),
+                self._slow(1, cancelled),
+                self._slow(2, cancelled),
+            ],
+        )
+        async for _ in agen:
+            break
+        await agen.aclose()
+        assert sorted(cancelled) == [1, 2]
+        assert len(asyncio.all_tasks()) == 1  # only the test's own task remains
+
+    async def test_filter_err_unordered_break_cancels_pending(self) -> None:
+        cancelled: list[int] = []
+        agen = filter_err_unordered(
+            [
+                err_after("x"),
+                self._slow(1, cancelled),
+                self._slow(2, cancelled),
+            ],
+        )
+        async for _ in agen:
+            break
+        await agen.aclose()
+        assert sorted(cancelled) == [1, 2]
+
+    async def test_filter_ok_break_cancels_pending(self) -> None:
+        cancelled: list[int] = []
+        agen = filter_ok(
+            [ok_after(0), self._slow(1, cancelled), self._slow(2, cancelled)],
+            concurrency=4,
+        )
+        async for _ in agen:
+            break
+        await agen.aclose()
+        assert sorted(cancelled) == [1, 2]
+
+    async def test_filter_err_break_cancels_pending(self) -> None:
+        cancelled: list[int] = []
+        agen = filter_err(
+            [err_after("x"), self._slow(1, cancelled), self._slow(2, cancelled)],
+            concurrency=4,
+        )
+        async for _ in agen:
+            break
+        await agen.aclose()
+        assert sorted(cancelled) == [1, 2]
+
+    async def test_break_closes_unconsumed_coros(self) -> None:
+        # coroutines outside the concurrency window are closed, not leaked
+        started: list[int] = []
+
+        async def tracked(v: int) -> Ok[int]:
+            started.append(v)
+            await asyncio.sleep(10)
+            return Ok(v)
+
+        unconsumed = tracked(9)
+        agen = filter_ok_unordered([ok_after(0), unconsumed], concurrency=1)
+        async for _ in agen:
+            break
+        await agen.aclose()
+        assert started == []
+        assert inspect.getcoroutinestate(unconsumed) == "CORO_CLOSED"
+
+
+# ---------------------------------------------------------------------------
+# collect_all
+# ---------------------------------------------------------------------------
+
+
+class TestCollectAll:
+    async def test_all_ok(self) -> None:
+        assert await collect_all([ok_after(1), ok_after(2)]) == Ok([1, 2])
+
+    async def test_empty(self) -> None:
+        assert await collect_all([]) == Ok([])
+
+    async def test_accumulates_all_errors_in_input_order(self) -> None:
+        result = await collect_all(
+            [
+                ok_after(1),
+                err_after("a", delay=0.05),
+                ok_after(2),
+                err_after("b", delay=0.0),
+            ],
+        )
+        assert result == Err(["a", "b"])
+
+    async def test_never_short_circuits(self) -> None:
+        completed: list[int] = []
+
+        async def tracked(v: int) -> Ok[int]:
+            await asyncio.sleep(0)
+            completed.append(v)
+            return Ok(v)
+
+        await collect_all([err_after("e"), tracked(1), tracked(2)])
+        assert sorted(completed) == [1, 2]
+
+    async def test_concurrency_respected(self) -> None:
+        probe = ConcurrencyProbe()
+        await collect_all([probe.track(Ok(i)) for i in range(8)], concurrency=3)
+        assert probe.peak <= 3
+
+
+# ---------------------------------------------------------------------------
+# map_partition
+# ---------------------------------------------------------------------------
+
+
+class TestMapPartition:
+    async def test_mixed(self) -> None:
+        async def check(v: int) -> Ok[int] | Err[str]:
+            await asyncio.sleep(0)
+            return Ok(v) if v > 0 else Err(f"bad: {v}")
+
+        oks, errs = await map_partition([1, -1, 2, -2], check)
+        assert oks == [1, 2]
+        assert errs == ["bad: -1", "bad: -2"]
+
+    async def test_empty(self) -> None:
+        async def check(v: int) -> Ok[int]:
+            return Ok(v)
+
+        assert await map_partition([], check) == ([], [])
+
+    async def test_concurrency_respected(self) -> None:
+        probe = ConcurrencyProbe()
+        await map_partition(range(8), lambda x: probe.track(Ok(x)), concurrency=3)
+        assert probe.peak <= 3
 
 
 # ---------------------------------------------------------------------------
@@ -839,7 +1061,9 @@ class TestTryReduce:
             return Ok(acc + x)
 
         result = await try_reduce(
-            [int_after(1), int_after(-1), int_after(3)], 0, maybe_fail,
+            [int_after(1), int_after(-1), int_after(3)],
+            0,
+            maybe_fail,
         )
         assert result == Err("negative: -1")
         assert called == [1, -1]
@@ -849,7 +1073,9 @@ class TestTryReduce:
             return Ok(acc * x)
 
         result = await try_reduce(
-            [int_after(2), int_after(3), int_after(4)], 1, multiply,
+            [int_after(2), int_after(3), int_after(4)],
+            1,
+            multiply,
         )
         assert result == Ok(24)
 
@@ -877,3 +1103,34 @@ class TestTryReduce:
 
         await try_reduce([tracked(1), tracked(2), tracked(3)], 0, f)
         assert order == [1, 2, 3]
+
+    async def test_exception_closes_remaining_coros(self) -> None:
+        async def boom() -> int:
+            raise RuntimeError("oops")
+
+        def f(acc: int, x: int) -> Ok[int]:
+            return Ok(acc + x)
+
+        remaining = int_after(1)
+        with pytest.raises(RuntimeError, match="oops"):
+            await try_reduce([boom(), remaining], 0, f)
+        assert inspect.getcoroutinestate(remaining) == "CORO_CLOSED"
+
+    async def test_err_cancels_remaining_tasks(self) -> None:
+        def fail(_acc: int, x: int) -> Err[str]:
+            return Err(f"nope: {x}")
+
+        remaining = asyncio.create_task(int_after(2, delay=10))
+        result = await try_reduce([int_after(1), remaining], 0, fail)
+        await asyncio.sleep(0)
+        assert result == Err("nope: 1")
+        assert remaining.cancelled()
+
+    async def test_err_closes_remaining_coros(self) -> None:
+        def fail(_acc: int, x: int) -> Err[str]:
+            return Err(f"nope: {x}")
+
+        remaining = int_after(2)
+        result = await try_reduce([int_after(1), remaining], 0, fail)
+        assert result == Err("nope: 1")
+        assert inspect.getcoroutinestate(remaining) == "CORO_CLOSED"

@@ -1,8 +1,24 @@
 from __future__ import annotations
 
+import asyncio
+import copy
+import pickle
+
 import pytest
 
-from corrode import Err, Ok, Result, UnwrapError, as_async_result, as_result, is_err, is_ok
+from corrode import (
+    DoError,
+    Err,
+    Ok,
+    Result,
+    UnwrapError,
+    as_async_result,
+    as_result,
+    from_optional,
+    from_optional_or_else,
+    is_err,
+    is_ok,
+)
 
 # ---------------------------------------------------------------------------
 # Construction, repr, equality, hashing
@@ -12,13 +28,13 @@ from corrode import Err, Ok, Result, UnwrapError, as_async_result, as_result, is
 class TestConstruction:
     def test_ok(self) -> None:
         o = Ok(1)
-        assert o._value == 1
+        assert o.ok_value == 1
         assert o.is_ok() is True
         assert o.is_err() is False
 
     def test_err(self) -> None:
         e = Err(2)
-        assert e._value == 2
+        assert e.err_value == 2
         assert e.is_ok() is False
         assert e.is_err() is True
 
@@ -514,6 +530,95 @@ class TestSlots:
 
 
 # ---------------------------------------------------------------------------
+# Immutability
+# ---------------------------------------------------------------------------
+
+
+class TestImmutability:
+    def test_ok_value_cannot_be_reassigned(self) -> None:
+        ok = Ok(1)
+        with pytest.raises(AttributeError, match="immutable"):
+            ok._value = 2
+        assert ok == Ok(1)
+
+    def test_err_value_cannot_be_reassigned(self) -> None:
+        err = Err("e")
+        with pytest.raises(AttributeError, match="immutable"):
+            err._value = "other"
+        assert err == Err("e")
+
+    def test_ok_value_cannot_be_deleted(self) -> None:
+        with pytest.raises(AttributeError, match="immutable"):
+            del Ok(1)._value
+
+    def test_err_value_cannot_be_deleted(self) -> None:
+        with pytest.raises(AttributeError, match="immutable"):
+            del Err("e")._value
+
+
+# ---------------------------------------------------------------------------
+# Pickling and copying
+# ---------------------------------------------------------------------------
+
+
+class TestPickleCopy:
+    @pytest.mark.parametrize("result", [Ok(1), Ok("val"), Err("bad"), Err(42)])
+    def test_pickle_roundtrip(self, result: Ok[object] | Err[object]) -> None:
+        assert pickle.loads(pickle.dumps(result)) == result  # noqa: S301
+
+    def test_copy(self) -> None:
+        assert copy.copy(Ok(1)) == Ok(1)
+        assert copy.copy(Err("e")) == Err("e")
+
+    def test_deepcopy_is_deep(self) -> None:
+        inner = [1, 2]
+        cloned = copy.deepcopy(Ok(inner))
+        assert cloned == Ok([1, 2])
+        assert cloned.ok_value is not inner
+
+
+# ---------------------------------------------------------------------------
+# No truth value
+# ---------------------------------------------------------------------------
+
+
+class TestTruthiness:
+    def test_ok_has_no_truth_value(self) -> None:
+        with pytest.raises(TypeError, match="no truth value"):
+            bool(Ok(1))
+
+    def test_err_has_no_truth_value(self) -> None:
+        with pytest.raises(TypeError, match="no truth value"):
+            bool(Err("e"))
+
+    def test_if_result_raises(self) -> None:
+        # the classic `if result:` silent bug — now loud
+        result: Result[int, str] = Err("hidden failure")
+        with pytest.raises(TypeError, match="no truth value"):
+            bool(result)
+
+
+# ---------------------------------------------------------------------------
+# Iterating Err outside do() raises the public DoError
+# ---------------------------------------------------------------------------
+
+
+class TestErrIteration:
+    def test_list_err_raises_do_error(self) -> None:
+        with pytest.raises(DoError, match="only iterable inside do"):
+            list(Err("x"))
+
+    def test_do_error_carries_err(self) -> None:
+        err = Err("x")
+        with pytest.raises(DoError) as exc_info:
+            list(err)
+        assert exc_info.value.err is err
+
+    def test_list_ok_yields_single_value(self) -> None:
+        assert list(Ok(1)) == [1]
+
+
+# ---------------------------------------------------------------------------
 # Pattern matching
 # ---------------------------------------------------------------------------
 
@@ -599,6 +704,14 @@ class TestAsResult:
             def f() -> int:
                 return 1
 
+    def test_base_exception_only_type_rejected(self) -> None:
+        # KeyboardInterrupt / SystemExit / CancelledError must never be swallowed
+        with pytest.raises(TypeError, match="subclasses of Exception"):
+
+            @as_result(KeyboardInterrupt)  # type: ignore[type-var]
+            def f() -> int:
+                return 1
+
 
 class TestAsAsyncResult:
     @pytest.mark.asyncio
@@ -634,6 +747,22 @@ class TestAsAsyncResult:
             @as_async_result("not an exception type")  # type: ignore[arg-type]
             async def f() -> int:
                 return 1
+
+    def test_base_exception_only_type_rejected(self) -> None:
+        with pytest.raises(TypeError, match="subclasses of Exception"):
+
+            @as_async_result(asyncio.CancelledError)  # type: ignore[type-var]
+            async def f() -> int:
+                return 1
+
+    @pytest.mark.asyncio
+    async def test_uncaught_exception_propagates(self) -> None:
+        @as_async_result(ValueError)
+        async def f() -> int:
+            raise IndexError
+
+        with pytest.raises(IndexError):
+            await f()
 
 
 # ---------------------------------------------------------------------------
@@ -676,3 +805,59 @@ class TestZip:
 
     def test_err_zip_err(self) -> None:
         assert Err("bad").zip(Err("other")) == Err("bad")
+
+
+# ---------------------------------------------------------------------------
+# flatten
+# ---------------------------------------------------------------------------
+
+
+class TestFlatten:
+    def test_ok_of_ok(self) -> None:
+        assert Ok(Ok(1)).flatten() == Ok(1)
+
+    def test_ok_of_err(self) -> None:
+        assert Ok(Err("bad")).flatten() == Err("bad")
+
+    def test_err(self) -> None:
+        assert Err("bad").flatten() == Err("bad")
+
+    def test_removes_one_level_only(self) -> None:
+        assert Ok(Ok(Ok(1))).flatten() == Ok(Ok(1))
+
+
+# ---------------------------------------------------------------------------
+# from_optional / from_optional_or_else
+# ---------------------------------------------------------------------------
+
+
+class TestFromOptional:
+    def test_value_becomes_ok(self) -> None:
+        assert from_optional(42, "missing") == Ok(42)
+
+    def test_none_becomes_err(self) -> None:
+        assert from_optional(None, "missing") == Err("missing")
+
+    def test_falsy_value_is_still_ok(self) -> None:
+        assert from_optional(0, "missing") == Ok(0)
+        assert from_optional("", "missing") == Ok("")
+        assert from_optional([], "missing") == Ok([])
+
+
+class TestFromOptionalOrElse:
+    def test_value_becomes_ok(self) -> None:
+        assert from_optional_or_else(42, lambda: "missing") == Ok(42)
+
+    def test_none_becomes_err(self) -> None:
+        assert from_optional_or_else(None, lambda: "missing") == Err("missing")
+
+    def test_error_fn_not_called_for_value(self) -> None:
+        calls = 0
+
+        def make_error() -> str:
+            nonlocal calls
+            calls += 1
+            return "missing"
+
+        assert from_optional_or_else(42, make_error) == Ok(42)
+        assert calls == 0

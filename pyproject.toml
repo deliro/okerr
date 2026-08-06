@@ -46,6 +46,10 @@ dev = [
     "mypy>=1.0",
     "ruff>=0.8",
 ]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.26",
+]
 
 [tool.mypy]
 packages = ["corrode"]
@@ -58,15 +62,21 @@ warn_unreachable = true
 
 [tool.ruff]
 line-length = 99
+target-version = "py311"
+
+[tool.ruff.format]
+docstring-code-format = true
 
 [tool.ruff.lint]
 select = ["ALL"]
 ignore = [
-    "D105",  # missing docstring in magic methods (__repr__, etc.)
-    "D107",  # missing docstring in __init__
-    "D211",  # `no-blank-line-before-class`
-    "D212",  # `multi-line-summary-first-line`
-    "TC003", # imports not behind TYPE_CHECKING — intentional throughout the project
+    "COM812", # trailing comma — conflicts with the formatter, which owns this
+    "D105",   # missing docstring in magic methods (__repr__, etc.)
+    "D107",   # missing docstring in __init__
+    "D203",   # `incorrect-blank-line-before-class` — conflicts with the formatter
+    "D211",   # `no-blank-line-before-class`
+    "D212",   # `multi-line-summary-first-line`
+    "TC003",  # imports not behind TYPE_CHECKING — intentional throughout the project
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -101,3 +111,5 @@ unused-type-ignore-comment = "ignore" # conflicts with mypy's type: ignore
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+testpaths = ["tests", "src/corrode"]
+addopts = "--doctest-modules --ignore=tests/type_checking/typesafety.py"

@@ -46,18 +46,19 @@ def test_readme_codeblock_typechecks(code: str, start_line: int) -> None:
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py") as f:
         f.write(code)
         f.flush()
-        stdout, _, exit_code = mypy_api.run([
-            f.name,
-            "--strict",
-            "--ignore-missing-imports",
-            "--no-error-summary",
-        ])
+        stdout, _, exit_code = mypy_api.run(
+            [
+                f.name,
+                "--strict",
+                "--ignore-missing-imports",
+                "--no-error-summary",
+            ],
+        )
 
     if exit_code != 0:
         # Filter out notes about error count
         errors = [
-            line for line in stdout.strip().split("\n")
-            if line and not line.startswith("Found ")
+            line for line in stdout.strip().split("\n") if line and not line.startswith("Found ")
         ]
         if errors:
             pytest.fail(f"mypy errors at README.md:L{start_line}:\n" + "\n".join(errors))

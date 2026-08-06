@@ -9,6 +9,7 @@ from __future__ import annotations
 from collections.abc import Awaitable
 
 from corrode import (
+    DoError,
     Err,
     Ok,
     Result,
@@ -16,6 +17,8 @@ from corrode import (
     as_async_result,
     as_result,
     async_iterator,
+    from_optional,
+    from_optional_or_else,
     is_err,
     is_ok,
     iterator,
@@ -238,6 +241,7 @@ async def _async_examples() -> None:
     _ia: Ok[int] = await Ok(42).inspect_async(side_effect)
     _iea2: Err[str] = await Err("e").inspect_err_async(err_side_effect)
 
+
 # ---------------------------------------------------------------------------
 # 13. UnwrapError
 # ---------------------------------------------------------------------------
@@ -269,10 +273,13 @@ def make_bool_result() -> Result[bool, str]:
 # Realistic usage: runtime Results with unknown Ok/Err
 _zip2: Result[tuple[int, str], str] = make_int_result().zip(make_str_result())
 _zip3: Result[tuple[int, str, float], str] = make_int_result().zip(
-    make_str_result(), make_float_result(),
+    make_str_result(),
+    make_float_result(),
 )
 _zip4: Result[tuple[int, str, float, bool], str] = make_int_result().zip(
-    make_str_result(), make_float_result(), make_bool_result(),
+    make_str_result(),
+    make_float_result(),
+    make_bool_result(),
 )
 
 # Err.zip always returns Err[E_co]
@@ -285,3 +292,64 @@ _zip_err_self2: Err[str] = Err("bad").zip(make_int_result(), make_str_result())
 
 _iter_mod = iterator
 _async_iter_mod = async_iterator
+
+# ---------------------------------------------------------------------------
+# 16. flatten
+# ---------------------------------------------------------------------------
+
+
+def make_nested() -> Result[Result[int, str], str]:
+    return Ok(Ok(1))
+
+
+_flattened: Result[int, str] = make_nested().flatten()
+_flatten_err: Err[str] = Err("bad").flatten()
+
+# ---------------------------------------------------------------------------
+# 17. from_optional / from_optional_or_else
+# ---------------------------------------------------------------------------
+
+
+def maybe_int() -> int | None:
+    return 1
+
+
+_fo: Result[int, str] = from_optional(maybe_int(), "missing")
+_foe: Result[int, str] = from_optional_or_else(maybe_int(), lambda: "missing")
+
+# ---------------------------------------------------------------------------
+# 18. DoError
+# ---------------------------------------------------------------------------
+
+_do_error = DoError(Err("x"))
+_do_error_err: Err[object] = _do_error.err
+
+# ---------------------------------------------------------------------------
+# 19. iterator: collect_all / map_partition
+# ---------------------------------------------------------------------------
+
+
+def _parse_ts(s: str) -> Result[int, str]:
+    return Ok(len(s))
+
+
+_ca: Result[list[int], list[str]] = iterator.collect_all([make_ok(), make_err()])
+_mp: tuple[list[int], list[str]] = iterator.map_partition(["a", "b"], _parse_ts)
+
+# ---------------------------------------------------------------------------
+# 20. async_iterator: collect_all / map_partition
+# ---------------------------------------------------------------------------
+
+
+async def _async_iter_examples() -> None:
+    async def fetch(i: int) -> Result[int, str]:
+        return Ok(i)
+
+    _aca: Result[list[int], list[str]] = await async_iterator.collect_all(
+        [fetch(1), fetch(2)],
+    )
+    _amp: tuple[list[int], list[str]] = await async_iterator.map_partition(
+        [1, 2],
+        fetch,
+        concurrency=2,
+    )

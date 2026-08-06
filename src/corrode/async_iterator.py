@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import itertools
+import operator
 from collections.abc import AsyncIterator, Callable, Coroutine, Iterable, Iterator
 from typing import TypeVar
 
@@ -18,18 +19,40 @@ _S = TypeVar("_S")
 _CoroOrTask = Coroutine[object, object, _R] | asyncio.Task[_R]
 
 
-async def _cancel_all(
+_GROUP_MSG = "one or more awaitables raised exceptions"
+
+
+async def _drain(
     pending: set[asyncio.Task[_R]],
     it: Iterator[_CoroOrTask[_S]],
-) -> None:
+) -> list[BaseException]:
+    """
+    Cancel *pending*, close unconsumed items, collect teardown exceptions.
+
+    Tasks that raise something other than ``CancelledError`` while being
+    cancelled would otherwise be silently discarded; return those exceptions
+    so the caller can attach them to the propagating ``ExceptionGroup``.
+    """
     for t in pending:
         t.cancel()
-    await asyncio.gather(*pending, return_exceptions=True)
+    results = await asyncio.gather(*pending, return_exceptions=True)
     for item in it:
         if isinstance(item, asyncio.Task):
             item.cancel()
         else:
             item.close()
+    return [
+        r
+        for r in results
+        if isinstance(r, BaseException) and not isinstance(r, asyncio.CancelledError)
+    ]
+
+
+async def _cancel_all(
+    pending: set[asyncio.Task[_R]],
+    it: Iterator[_CoroOrTask[_S]],
+) -> None:
+    await _drain(pending, it)
 
 
 def _wrap_indexed(idx: int, item: _CoroOrTask[_R]) -> asyncio.Task[tuple[int, _R]]:
@@ -45,10 +68,22 @@ def _make_pending_indexed(
 ) -> tuple[set[asyncio.Task[tuple[int, _R]]], int]:
     pending: set[asyncio.Task[tuple[int, _R]]] = set()
     idx = 0
-    for item in (it if concurrency is None else itertools.islice(it, concurrency)):
+    for item in it if concurrency is None else itertools.islice(it, concurrency):
         pending.add(_wrap_indexed(idx, item))
         idx += 1
     return pending, idx
+
+
+def _split_done(done: set[asyncio.Task[_R]]) -> tuple[list[_R], list[BaseException]]:
+    """Split a finished batch into successful values and raised exceptions."""
+    values: list[_R] = []
+    excs: list[BaseException] = []
+    for task in done:
+        try:
+            values.append(task.result())
+        except BaseException as exc:  # noqa: BLE001 — re-raised by the caller as a group
+            excs.append(exc)
+    return values, excs
 
 
 async def collect(
@@ -65,40 +100,64 @@ async def collect(
     *concurrency* limits how many run at the same time.
     ``None`` means unlimited — all are scheduled at once.
 
-    **Exceptions**: if a coroutine raises, the exception propagates and all remaining
-    tasks are cancelled. If multiple tasks raise in the same ``asyncio.wait`` batch,
-    only one exception propagates — the rest are silently discarded.
+    **Exceptions**: if any coroutine raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
 
-    Example::
+    Example:
+        >>> import asyncio
+        >>> async def fetch(i: int) -> Result[int, str]:
+        ...     return Ok(i) if i > 0 else Err("bad")
+        >>> asyncio.run(collect([fetch(1), fetch(2), fetch(3)]))
+        Ok([1, 2, 3])
+        >>> asyncio.run(collect([fetch(1), fetch(0)], concurrency=4))
+        Err('bad')
 
-        collect([fetch(1), fetch(2), fetch(3)])
-        collect([fetch(1), fetch(2)], concurrency=4)
+        Raised exceptions always arrive as an ``ExceptionGroup`` — one failure
+        is a group of one, several failures are collected together:
+
+        >>> async def broken(source: str) -> Result[int, str]:
+        ...     raise ConnectionError(source)
+        >>> async def demo(sources: list[str]) -> list[str]:
+        ...     errors: list[str] = []
+        ...     try:
+        ...         await collect([broken(s) for s in sources])
+        ...     except* ConnectionError as group:
+        ...         errors = sorted(str(e) for e in group.exceptions)
+        ...     return errors
+        >>> asyncio.run(demo(["eu"]))
+        ['eu']
+        >>> asyncio.run(demo(["eu", "us"]))
+        ['eu', 'us']
+
     """
     it = iter(iterable)
     pending, next_idx = _make_pending_indexed(it, concurrency)
     indexed: dict[int, T] = {}
 
-    while pending:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-        for task in done:
-            try:
-                idx, result = task.result()
-            except BaseException:
-                for other in done:
-                    if other is not task:
-                        other.exception()  # mark as retrieved to avoid warnings
-                await _cancel_all(pending, it)
-                raise
-            match result:
-                case Ok(value):
-                    indexed[idx] = value
-                    next_item = next(it, None)
-                    if next_item is not None:
-                        pending.add(_wrap_indexed(next_idx, next_item))
-                        next_idx += 1
-                case Err() as err:
-                    await _cancel_all(pending, it)
-                    return err
+    try:
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            batch, excs = _split_done(done)
+            if excs:
+                excs.extend(await _drain(pending, it))
+                pending = set()
+                raise BaseExceptionGroup(_GROUP_MSG, excs)
+            batch.sort(key=operator.itemgetter(0))
+            for idx, result in batch:
+                match result:
+                    case Ok(value):
+                        indexed[idx] = value
+                        next_item = next(it, None)
+                        if next_item is not None:
+                            pending.add(_wrap_indexed(next_idx, next_item))
+                            next_idx += 1
+                    case Err() as err:
+                        return err
+    finally:
+        await _cancel_all(pending, it)
 
     return Ok([indexed[i] for i in range(len(indexed))])
 
@@ -118,14 +177,19 @@ async def map_collect(
     *concurrency* limits how many calls to *f* run at the same time.
     ``None`` means unlimited — all are scheduled at once.
 
-    **Exceptions**: if *f* raises, the exception propagates and all remaining
-    tasks are cancelled. If multiple tasks raise in the same ``asyncio.wait`` batch,
-    only one exception propagates — the rest are silently discarded.
+    **Exceptions**: if *f* raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
 
-    Example::
+    Example:
+        >>> import asyncio
+        >>> async def double(x: int) -> Result[int, str]:
+        ...     return Ok(x * 2)
+        >>> asyncio.run(map_collect([1, 2, 3], double, concurrency=2))
+        Ok([2, 4, 6])
 
-        map_collect(user_ids, fetch_user)
-        map_collect(urls, fetch, concurrency=10)
     """
     return await collect(
         (f(element) for element in iterable),
@@ -147,35 +211,40 @@ async def partition(
     *concurrency* limits how many run at the same time.
     ``None`` means unlimited — all are scheduled at once.
 
-    **Exceptions**: if a coroutine raises, the exception propagates and all remaining
-    tasks are cancelled. If multiple tasks raise in the same ``asyncio.wait`` batch,
-    only one exception propagates — the rest are silently discarded.
+    **Exceptions**: if any coroutine raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
 
-    Example::
+    Example:
+        >>> import asyncio
+        >>> async def fetch(i: int) -> Result[int, str]:
+        ...     return Ok(i) if i > 0 else Err(f"bad: {i}")
+        >>> asyncio.run(partition([fetch(1), fetch(-1), fetch(2)]))
+        ([1, 2], ['bad: -1'])
 
-        oks, errs = await partition([fetch(1), fetch(2), fetch(3)])
-        oks, errs = await partition([fetch(1), fetch(2)], concurrency=4)
     """
     it = iter(iterable)
     pending, next_idx = _make_pending_indexed(it, concurrency)
     indexed: dict[int, Result[T, E]] = {}
 
-    while pending:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-        for task in done:
-            try:
-                idx, result = task.result()
-            except BaseException:
-                for other in done:
-                    if other is not task:
-                        other.exception()  # mark as retrieved to avoid warnings
-                await _cancel_all(pending, it)
-                raise
-            indexed[idx] = result
-            next_item = next(it, None)
-            if next_item is not None:
-                pending.add(_wrap_indexed(next_idx, next_item))
-                next_idx += 1
+    try:
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            batch, excs = _split_done(done)
+            if excs:
+                excs.extend(await _drain(pending, it))
+                pending = set()
+                raise BaseExceptionGroup(_GROUP_MSG, excs)
+            for idx, result in batch:
+                indexed[idx] = result
+                next_item = next(it, None)
+                if next_item is not None:
+                    pending.add(_wrap_indexed(next_idx, next_item))
+                    next_idx += 1
+    finally:
+        await _cancel_all(pending, it)
 
     oks: list[T] = []
     errs: list[E] = []
@@ -186,6 +255,79 @@ async def partition(
             case Err(e):
                 errs.append(e)
     return oks, errs
+
+
+async def map_partition(
+    iterable: Iterable[T],
+    f: Callable[[T], _CoroOrTask[Result[U, E]]],
+    *,
+    concurrency: int | None = None,
+) -> tuple[list[U], list[E]]:
+    """
+    Apply *f* to each element concurrently and split the results into ``(oks, errs)``.
+
+    Results are collected in input order within each list.
+    Never short-circuits — all calls run to completion.
+
+    *concurrency* limits how many calls to *f* run at the same time.
+    ``None`` means unlimited — all are scheduled at once.
+
+    **Exceptions**: if *f* raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
+
+    Example:
+        >>> import asyncio
+        >>> async def check(i: int) -> Result[int, str]:
+        ...     return Ok(i) if i > 0 else Err(f"bad: {i}")
+        >>> asyncio.run(map_partition([1, -1, 2], check, concurrency=2))
+        ([1, 2], ['bad: -1'])
+
+    """
+    return await partition(
+        (f(element) for element in iterable),
+        concurrency=concurrency,
+    )
+
+
+async def collect_all(
+    iterable: Iterable[_CoroOrTask[Result[T, E]]],
+    *,
+    concurrency: int | None = None,
+) -> Result[list[T], list[E]]:
+    """
+    Await coroutines or tasks concurrently, accumulating **all** errors.
+
+    Returns ``Ok`` of all success values (in input order) only if every result
+    is ``Ok``; otherwise returns ``Err`` of every error (in input order).
+    Unlike ``collect``, never short-circuits — all awaitables run to
+    completion, so the caller gets a complete error report.
+
+    *concurrency* limits how many run at the same time.
+    ``None`` means unlimited — all are scheduled at once.
+
+    **Exceptions**: if any coroutine raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
+
+    Example:
+        >>> import asyncio
+        >>> async def fetch(i: int) -> Result[int, str]:
+        ...     return Ok(i) if i > 0 else Err(f"bad: {i}")
+        >>> asyncio.run(collect_all([fetch(1), fetch(2)]))
+        Ok([1, 2])
+        >>> asyncio.run(collect_all([fetch(1), fetch(-1), fetch(-2)]))
+        Err(['bad: -1', 'bad: -2'])
+
+    """
+    oks, errs = await partition(iterable, concurrency=concurrency)
+    if errs:
+        return Err(errs)
+    return Ok(oks)
 
 
 async def filter_ok_unordered(
@@ -202,9 +344,14 @@ async def filter_ok_unordered(
     *concurrency* limits how many run at the same time.
     ``None`` means unlimited — all are scheduled at once.
 
-    **Exceptions**: if a coroutine raises, the exception propagates and all remaining
-    tasks are cancelled. If multiple tasks raise in the same ``asyncio.wait`` batch,
-    only one exception propagates — the rest are silently discarded.
+    If the consumer stops iterating early (``break``, exception, ``aclose()``),
+    all in-flight tasks are cancelled and unconsumed coroutines are closed.
+
+    **Exceptions**: if any coroutine raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
 
     Example::
 
@@ -217,25 +364,25 @@ async def filter_ok_unordered(
         for item in (it if concurrency is None else itertools.islice(it, concurrency))
     }
 
-    while pending:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-        for task in done:
-            try:
-                result = task.result()
-            except BaseException:
-                for other in done:
-                    if other is not task:
-                        other.exception()  # mark as retrieved to avoid warnings
-                await _cancel_all(pending, it)
-                raise
-            match result:
-                case Ok(value):
-                    yield value
-                case Err():
-                    pass
-            next_item = next(it, None)
-            if next_item is not None:
-                pending.add(asyncio.ensure_future(next_item))
+    try:
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            results, excs = _split_done(done)
+            if excs:
+                excs.extend(await _drain(pending, it))
+                pending = set()
+                raise BaseExceptionGroup(_GROUP_MSG, excs)
+            for result in results:
+                match result:
+                    case Ok(value):
+                        yield value
+                    case Err():
+                        pass
+                next_item = next(it, None)
+                if next_item is not None:
+                    pending.add(asyncio.ensure_future(next_item))
+    finally:
+        await _cancel_all(pending, it)
 
 
 async def filter_err_unordered(
@@ -252,9 +399,14 @@ async def filter_err_unordered(
     *concurrency* limits how many run at the same time.
     ``None`` means unlimited — all are scheduled at once.
 
-    **Exceptions**: if a coroutine raises, the exception propagates and all remaining
-    tasks are cancelled. If multiple tasks raise in the same ``asyncio.wait`` batch,
-    only one exception propagates — the rest are silently discarded.
+    If the consumer stops iterating early (``break``, exception, ``aclose()``),
+    all in-flight tasks are cancelled and unconsumed coroutines are closed.
+
+    **Exceptions**: if any coroutine raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
 
     Example::
 
@@ -267,25 +419,25 @@ async def filter_err_unordered(
         for item in (it if concurrency is None else itertools.islice(it, concurrency))
     }
 
-    while pending:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-        for task in done:
-            try:
-                result = task.result()
-            except BaseException:
-                for other in done:
-                    if other is not task:
-                        other.exception()  # mark as retrieved to avoid warnings
-                await _cancel_all(pending, it)
-                raise
-            match result:
-                case Ok():
-                    pass
-                case Err(e):
-                    yield e
-            next_item = next(it, None)
-            if next_item is not None:
-                pending.add(asyncio.ensure_future(next_item))
+    try:
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            results, excs = _split_done(done)
+            if excs:
+                excs.extend(await _drain(pending, it))
+                pending = set()
+                raise BaseExceptionGroup(_GROUP_MSG, excs)
+            for result in results:
+                match result:
+                    case Ok():
+                        pass
+                    case Err(e):
+                        yield e
+                next_item = next(it, None)
+                if next_item is not None:
+                    pending.add(asyncio.ensure_future(next_item))
+    finally:
+        await _cancel_all(pending, it)
 
 
 async def filter_ok(
@@ -304,9 +456,14 @@ async def filter_ok(
     Unlike ``filter_ok_unordered``, ``None`` is not accepted because the
     reorder buffer would be unbounded.
 
-    **Exceptions**: if a coroutine raises, the exception propagates and all remaining
-    tasks are cancelled. If multiple tasks raise in the same ``asyncio.wait`` batch,
-    only one exception propagates — the rest are silently discarded.
+    If the consumer stops iterating early (``break``, exception, ``aclose()``),
+    all in-flight tasks are cancelled and unconsumed coroutines are closed.
+
+    **Exceptions**: if any coroutine raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
 
     Example::
 
@@ -318,30 +475,30 @@ async def filter_ok(
     buf: dict[int, Result[T, E]] = {}
     next_yield = 0
 
-    while pending:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-        for task in done:
-            try:
-                idx, result = task.result()
-            except BaseException:
-                for other in done:
-                    if other is not task:
-                        other.exception()
-                await _cancel_all(pending, it)
-                raise
-            buf[idx] = result
-            next_item = next(it, None)
-            if next_item is not None:
-                pending.add(_wrap_indexed(next_idx, next_item))
-                next_idx += 1
+    try:
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            batch, excs = _split_done(done)
+            if excs:
+                excs.extend(await _drain(pending, it))
+                pending = set()
+                raise BaseExceptionGroup(_GROUP_MSG, excs)
+            for idx, result in batch:
+                buf[idx] = result
+                next_item = next(it, None)
+                if next_item is not None:
+                    pending.add(_wrap_indexed(next_idx, next_item))
+                    next_idx += 1
 
-        while next_yield in buf:
-            match buf.pop(next_yield):
-                case Ok(value):
-                    yield value
-                case Err():
-                    pass
-            next_yield += 1
+            while next_yield in buf:
+                match buf.pop(next_yield):
+                    case Ok(value):
+                        yield value
+                    case Err():
+                        pass
+                next_yield += 1
+    finally:
+        await _cancel_all(pending, it)
 
 
 async def filter_err(
@@ -360,9 +517,14 @@ async def filter_err(
     Unlike ``filter_err_unordered``, ``None`` is not accepted because the
     reorder buffer would be unbounded.
 
-    **Exceptions**: if a coroutine raises, the exception propagates and all remaining
-    tasks are cancelled. If multiple tasks raise in the same ``asyncio.wait`` batch,
-    only one exception propagates — the rest are silently discarded.
+    If the consumer stops iterating early (``break``, exception, ``aclose()``),
+    all in-flight tasks are cancelled and unconsumed coroutines are closed.
+
+    **Exceptions**: if any coroutine raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
 
     Example::
 
@@ -374,30 +536,30 @@ async def filter_err(
     buf: dict[int, Result[T, E]] = {}
     next_yield = 0
 
-    while pending:
-        done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
-        for task in done:
-            try:
-                idx, result = task.result()
-            except BaseException:
-                for other in done:
-                    if other is not task:
-                        other.exception()
-                await _cancel_all(pending, it)
-                raise
-            buf[idx] = result
-            next_item = next(it, None)
-            if next_item is not None:
-                pending.add(_wrap_indexed(next_idx, next_item))
-                next_idx += 1
+    try:
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            batch, excs = _split_done(done)
+            if excs:
+                excs.extend(await _drain(pending, it))
+                pending = set()
+                raise BaseExceptionGroup(_GROUP_MSG, excs)
+            for idx, result in batch:
+                buf[idx] = result
+                next_item = next(it, None)
+                if next_item is not None:
+                    pending.add(_wrap_indexed(next_idx, next_item))
+                    next_idx += 1
 
-        while next_yield in buf:
-            match buf.pop(next_yield):
-                case Ok():
-                    pass
-                case Err(e):
-                    yield e
-            next_yield += 1
+            while next_yield in buf:
+                match buf.pop(next_yield):
+                    case Ok():
+                        pass
+                    case Err(e):
+                        yield e
+                next_yield += 1
+    finally:
+        await _cancel_all(pending, it)
 
 
 async def try_reduce(
@@ -412,29 +574,39 @@ async def try_reduce(
     each awaited value is passed to *f* before the next is awaited, because the
     accumulator depends on the previous step.
 
-    Example::
+    On short-circuit — and on any exception — remaining tasks are cancelled and
+    unconsumed coroutines are closed.
 
-        async def fetch_int(url: str) -> int: ...
+    **Exceptions**: unlike the concurrent functions, execution is sequential —
+    only one coroutine can fail — so exceptions propagate bare, without an
+    ``ExceptionGroup``.
 
-        def safe_add(acc: int, x: int) -> Result[int, str]:
-            if x < 0:
-                return Err(f"negative: {x}")
-            return Ok(acc + x)
+    Example:
+        >>> import asyncio
+        >>> async def fetch(i: int) -> int:
+        ...     return i
+        >>> def safe_add(acc: int, x: int) -> Result[int, str]:
+        ...     return Err(f"negative: {x}") if x < 0 else Ok(acc + x)
+        >>> asyncio.run(try_reduce([fetch(1), fetch(2)], 0, safe_add))
+        Ok(3)
+        >>> asyncio.run(try_reduce([fetch(1), fetch(-1), fetch(3)], 0, safe_add))
+        Err('negative: -1')
 
-        await try_reduce([fetch_int(u1), fetch_int(u2)], 0, safe_add)
     """
     it = iter(iterable)
     acc: U = initial
-    for item in it:
-        value: T = await item
-        match f(acc, value):
-            case Ok(new_acc):
-                acc = new_acc
-            case Err() as err:
-                for remaining in it:
-                    if isinstance(remaining, asyncio.Task):
-                        remaining.cancel()
-                    else:
-                        remaining.close()
-                return err
+    try:
+        for item in it:
+            value: T = await item
+            match f(acc, value):
+                case Ok(new_acc):
+                    acc = new_acc
+                case Err() as err:
+                    return err
+    finally:
+        for remaining in it:
+            if isinstance(remaining, asyncio.Task):
+                remaining.cancel()
+            else:
+                remaining.close()
     return Ok(acc)
