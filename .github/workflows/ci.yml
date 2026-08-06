@@ -7,7 +7,41 @@ on:
 
 name: CI
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    name: lint
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Setup Python
+        run: uv python install 3.13
+
+      - name: Install dependencies
+        run: uv sync --locked
+
+      - name: Run ruff check
+        run: uv run ruff check .
+
+      - name: Run ruff format check
+        run: uv run ruff format --check .
+
+      - name: Build packages
+        run: uv build
+
+      - name: Smoke test wheel
+        run: uv run --isolated --no-project --with dist/*.whl python -c "import corrode; assert corrode.Ok(1).unwrap() == 1"
+
+      - name: Build docs
+        run: uv run --locked --group docs mkdocs build --strict
+
   test:
     runs-on: ubuntu-latest
     strategy:
@@ -19,33 +53,24 @@ jobs:
           - "3.11"
     name: Python ${{ matrix.python }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
 
       - name: Setup Python ${{ matrix.python }}
         run: uv python install ${{ matrix.python }}
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
 
-      # Tests
+      # Coverage is collected on the newest Python only
       - name: Run tests
-        run: uv run pytest ${{ matrix.python == '3.12' && '--cov=corrode --cov-report=xml' || '' }}
+        run: uv run pytest ${{ matrix.python == '3.14' && '--cov=corrode --cov-report=xml' || '' }}
 
-      # Linters
-      - name: Run ruff
-        run: uv run ruff check .
-
-      # Packaging
-      - name: Build packages
-        run: uv build
-
-      # Coverage
       - name: Upload coverage to codecov.io
-        uses: codecov/codecov-action@v4
-        if: matrix.python == '3.12'
+        uses: codecov/codecov-action@v5
+        if: matrix.python == '3.14'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
 
@@ -56,7 +81,10 @@ jobs:
       matrix:
         include:
           - checker: mypy
-            run: uv run mypy && uv run mypy tests/type_checking/typesafety.py
+            run: >
+              uv run mypy
+              && uv run mypy --python-version 3.11
+              && uv run mypy tests/type_checking/typesafety.py
           - checker: basedpyright
             run: uv run --with basedpyright basedpyright
           - checker: ty
@@ -65,16 +93,16 @@ jobs:
             run: uv run --with pyrefly pyrefly check src/corrode/ tests/type_checking/typesafety.py
     name: typecheck / ${{ matrix.checker }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v6
 
       - name: Setup Python
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --locked
 
       - name: Run ${{ matrix.checker }}
         run: ${{ matrix.run }}
