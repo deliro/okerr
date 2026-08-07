@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+    <url>
+         <loc>https://deliro.github.io/corrode/dev/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://deliro.github.io/corrode/dev/changelog/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://deliro.github.io/corrode/dev/api/async-iterator/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://deliro.github.io/corrode/dev/api/iterator/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+    <url>
+         <loc>https://deliro.github.io/corrode/dev/api/result/</loc>
+         <lastmod>2026-08-07</lastmod>
+    </url>
+</urlset>
