@@ -496,6 +496,67 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#100-2026-08-07" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.0.0 (2026-08-07)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.0.0 (2026-08-07)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#breaking-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ⚠ BREAKING CHANGES
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#bug-fixes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Bug Fixes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#documentation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Documentation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#012-2026-02-19" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -508,7 +569,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bug-fixes" class="md-nav__link">
+  <a href="#bug-fixes_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug Fixes
@@ -536,7 +597,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bug-fixes_1" class="md-nav__link">
+  <a href="#bug-fixes_2" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug Fixes
@@ -564,7 +625,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#features" class="md-nav__link">
+  <a href="#features_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Features
@@ -575,7 +636,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#bug-fixes_2" class="md-nav__link">
+  <a href="#bug-fixes_3" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug Fixes
@@ -586,7 +647,7 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
+  <a href="#documentation_1" class="md-nav__link">
     <span class="md-ellipsis">
       
         Documentation
@@ -614,7 +675,7 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#bug-fixes_3" class="md-nav__link">
+  <a href="#bug-fixes_4" class="md-nav__link">
     <span class="md-ellipsis">
       
         Bug Fixes
@@ -672,34 +733,54 @@
 <p>All notable changes to this project will be documented in this file.</p>
 <p>The format is based on <a href="https://keepachangelog.com/en/1.1.0/">Keep a Changelog</a>,
 and this project adheres to <a href="https://semver.org/spec/v2.0.0.html">Semantic Versioning</a>.</p>
-<h2 id="012-2026-02-19"><a href="https://github.com/deliro/corrode/compare/v0.1.1...v0.1.2">0.1.2</a> (2026-02-19)</h2>
+<h2 id="100-2026-08-07"><a href="https://github.com/deliro/corrode/compare/v0.1.2...v1.0.0">1.0.0</a> (2026-08-07)</h2>
+<h3 id="breaking-changes">⚠ BREAKING CHANGES</h3>
+<ul>
+<li>bool(Result) now raises TypeError; as_result/ as_async_result reject BaseException-only types; simultaneous task exceptions arrive as ExceptionGroup (always, even a single one); the private _DoError is renamed to public DoError.</li>
+</ul>
+<h3 id="features">Features</h3>
+<ul>
+<li>strictness guarantees, task-safe async iterators, new API (<a href="https://github.com/deliro/corrode/commit/a81025f1cc25e44caa98b37169d3aa104fd4a187">a81025f</a>)</li>
+</ul>
 <h3 id="bug-fixes">Bug Fixes</h3>
+<ul>
+<li><strong>docs:</strong> publish versioned docs, repair broken site rendering (<a href="https://github.com/deliro/corrode/issues/21">#21</a>) (<a href="https://github.com/deliro/corrode/commit/9ce43be13f4f90cc2c67fa0ff0dd2a36b648e0a6">9ce43be</a>)</li>
+</ul>
+<h3 id="documentation">Documentation</h3>
+<ul>
+<li>add acknowledgements (<a href="https://github.com/deliro/corrode/commit/68bf8b0d5d408acbd32d4a05cfcdb77a69c7db4f">68bf8b0</a>)</li>
+<li>add The Zen of Python quote (<a href="https://github.com/deliro/corrode/commit/6f3bb5ebc457b64f96e2b06229bf6c770057b2d6">6f3bb5e</a>)</li>
+<li>generated docs site, slimmer README, contributing guide (<a href="https://github.com/deliro/corrode/commit/5bbbc59a8ab13543e08c808905530be9577afa56">5bbbc59</a>)</li>
+<li>README improved &amp; <code>do</code> deprecated (<a href="https://github.com/deliro/corrode/commit/baef9223318ef9b90f00265898fb5424a92251ac">baef922</a>)</li>
+</ul>
+<h2 id="012-2026-02-19"><a href="https://github.com/deliro/corrode/compare/v0.1.1...v0.1.2">0.1.2</a> (2026-02-19)</h2>
+<h3 id="bug-fixes_1">Bug Fixes</h3>
 <ul>
 <li><strong>types:</strong> narrow as_async_result return type from Awaitable to (<a href="https://github.com/deliro/corrode/commit/ea5d40c28b589ba292aad5eef1ad166888d1a622">ea5d40c</a>)</li>
 </ul>
 <h2 id="011-2026-02-19"><a href="https://github.com/deliro/corrode/compare/v0.1.0...v0.1.1">0.1.1</a> (2026-02-19)</h2>
-<h3 id="bug-fixes_1">Bug Fixes</h3>
+<h3 id="bug-fixes_2">Bug Fixes</h3>
 <ul>
 <li><strong>ci:</strong> trigger pypi publish on release (<a href="https://github.com/deliro/corrode/commit/c7f273d54a7a1137a9f4c34614e2f312b40e17df">c7f273d</a>)</li>
 </ul>
 <h2 id="010-2026-02-19"><a href="https://github.com/deliro/corrode/compare/v0.0.1...v0.1.0">0.1.0</a> (2026-02-19)</h2>
-<h3 id="features">Features</h3>
+<h3 id="features_1">Features</h3>
 <ul>
 <li><code>Result.zip</code> &amp; more async iterators (<a href="https://github.com/deliro/corrode/commit/2976fa037b74bf95c9f614514859f8f5f2a36e42">2976fa0</a>)</li>
 <li><strong>iterator:</strong> async functions that collect lists (<code>collect</code>, (<a href="https://github.com/deliro/corrode/commit/dced816128776d0ff50e88349aaffdfcebed20fe">dced816</a>)</li>
 <li>iterators (<a href="https://github.com/deliro/corrode/commit/a79c97d1fc7eac18406224f70dcaf4f2a382d4f7">a79c97d</a>)</li>
 </ul>
-<h3 id="bug-fixes_2">Bug Fixes</h3>
+<h3 id="bug-fixes_3">Bug Fixes</h3>
 <ul>
 <li><strong>tests:</strong> README.md code blocks run only on Python3.12+ versions (<a href="https://github.com/deliro/corrode/commit/b57b0eddcb94a734fe37ef45017d18f889e01ec6">b57b0ed</a>)</li>
 <li>update uv.lock on release (<a href="https://github.com/deliro/corrode/commit/891e8cda2c0dcba9a67bf1ceae0f0883691ec7a4">891e8cd</a>)</li>
 </ul>
-<h3 id="documentation">Documentation</h3>
+<h3 id="documentation_1">Documentation</h3>
 <ul>
 <li>rewrite documentation and validate code blocks (<a href="https://github.com/deliro/corrode/commit/8c1ff91c5ebbc84f05ccdcc467825f47170f3c68">8c1ff91</a>)</li>
 </ul>
 <h2 id="001-2026-02-16"><a href="https://github.com/deliro/corrode/compare/v0.0.0...v0.0.1">0.0.1</a> (2026-02-16)</h2>
-<h3 id="bug-fixes_3">Bug Fixes</h3>
+<h3 id="bug-fixes_4">Bug Fixes</h3>
 <ul>
 <li>anchor release-please to v0.0.0 tag (<a href="https://github.com/deliro/corrode/commit/57a322fbe90a6c8cc4006f64991a1f48ef52c10f">57a322f</a>)</li>
 <li>use conditional import for TypeIs to support Python 3.13+ (<a href="https://github.com/deliro/corrode/commit/4f49686cac0adbaee641b58251b6f89f3c005594">4f49686</a>)</li>
