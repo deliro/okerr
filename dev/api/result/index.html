@@ -2106,7 +2106,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return ``True`` because this is an ``Ok`` value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).is_ok()</span>
 <span class="sd">            True</span>
 
@@ -2117,7 +2117,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return ``False`` because this is an ``Ok`` value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).is_err()</span>
 <span class="sd">            False</span>
 
@@ -2128,7 +2128,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return ``True`` if the result is ``Ok`` and the predicate *f* returns ``True``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).is_ok_and(lambda x: x &gt; 1)</span>
 <span class="sd">            True</span>
 <span class="sd">            &gt;&gt;&gt; Ok(0).is_ok_and(lambda x: x &gt; 1)</span>
@@ -2147,7 +2147,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Since this is ``Ok``, always returns ``False``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).is_err_and(lambda e: True)</span>
 <span class="sd">            False</span>
 
@@ -2168,7 +2168,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Return the contained ``Ok`` value, discarding the error, if any.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).ok()</span>
 <span class="sd">            2</span>
 
@@ -2181,7 +2181,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Return ``None``, discarding the success value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).err() is None</span>
 <span class="sd">            True</span>
 
@@ -2193,7 +2193,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        The contained ``Ok`` value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).ok_value</span>
 <span class="sd">            2</span>
 
@@ -2209,7 +2209,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="sd">        Raises:</span>
 <span class="sd">            UnwrapError: Never raised for ``Ok``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).expect(&quot;must exist&quot;)</span>
 <span class="sd">            2</span>
 
@@ -2224,7 +2224,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="sd">            UnwrapError: Always, because this is an ``Ok`` value, with a</span>
 <span class="sd">                message including the passed *message* and the ``Ok`` content.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).expect_err(&quot;wanted an error&quot;)</span>
 <span class="sd">            Traceback (most recent call last):</span>
 <span class="sd">                ...</span>
@@ -2242,7 +2242,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="sd">        Raises:</span>
 <span class="sd">            UnwrapError: Never raised for ``Ok``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).unwrap()</span>
 <span class="sd">            2</span>
 
@@ -2256,7 +2256,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="sd">        Raises:</span>
 <span class="sd">            UnwrapError: Always, because this is an ``Ok`` value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).unwrap_err()</span>
 <span class="sd">            Traceback (most recent call last):</span>
 <span class="sd">                ...</span>
@@ -2271,7 +2271,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        The default value is ignored because this is an ``Ok``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).unwrap_or(0)</span>
 <span class="sd">            2</span>
 
@@ -2284,7 +2284,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        The callable is never invoked because this is an ``Ok``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).unwrap_or_else(len)</span>
 <span class="sd">            2</span>
 
@@ -2305,7 +2305,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        The exception is never raised because this is an ``Ok``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).unwrap_or_raise(ValueError)</span>
 <span class="sd">            2</span>
 
@@ -2318,7 +2318,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Map a ``Result[T, E]`` to ``Result[U, E]``, leaving an ``Err`` value untouched.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).map(lambda x: x * 10)</span>
 <span class="sd">            Ok(20)</span>
 
@@ -2339,7 +2339,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Since this is ``Ok``, *default* is ignored.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).map_or(0, lambda x: x * 10)</span>
 <span class="sd">            20</span>
 
@@ -2360,7 +2360,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Map a ``Result[T, E]`` to ``U``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).map_or_else(lambda e: 0, lambda x: x * 10)</span>
 <span class="sd">            20</span>
 
@@ -2385,7 +2385,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Map a ``Result[T, E]`` to ``Result[T, F]``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).map_err(str.upper)</span>
 <span class="sd">            Ok(2)</span>
 
@@ -2406,7 +2406,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        This function can be used for control flow based on ``Result`` values.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; def halve(x: int) -&gt; Result[int, str]:</span>
 <span class="sd">            ...     return Ok(x // 2) if x % 2 == 0 else Err(&quot;odd&quot;)</span>
 <span class="sd">            &gt;&gt;&gt; Ok(4).and_then(halve)</span>
@@ -2434,7 +2434,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Since this is ``Ok``, *op* is never called.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).or_else(lambda e: Ok(0))</span>
 <span class="sd">            Ok(2)</span>
 
@@ -2455,7 +2455,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Return the original result unchanged.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).inspect(print)</span>
 <span class="sd">            2</span>
 <span class="sd">            Ok(2)</span>
@@ -2483,7 +2483,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 
 <span class="sd">        Return the original result unchanged. Since this is ``Ok``, *op* is not called.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(2).inspect_err(print)</span>
 <span class="sd">            Ok(2)</span>
 
@@ -2535,7 +2535,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="sd">        Returns ``Ok`` of a tuple of all values if all results are ``Ok``.</span>
 <span class="sd">        Returns the first ``Err`` encountered otherwise.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(1).zip(Ok(&quot;a&quot;))</span>
 <span class="sd">            Ok((1, &#39;a&#39;))</span>
 <span class="sd">            &gt;&gt;&gt; Ok(1).zip(Ok(&quot;a&quot;), Ok(3.0))</span>
@@ -2560,7 +2560,7 @@ have been implemented, only the ones that make sense in the Python context.</p>
 <span class="sd">        Convert ``Result[Result[U, F], E]`` into ``Result[U, F]``.</span>
 <span class="sd">        Only one level is removed — ``Ok(Ok(Ok(1))).flatten()`` is ``Ok(Ok(1))``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Ok(Ok(1)).flatten()</span>
 <span class="sd">            Ok(1)</span>
 <span class="sd">            &gt;&gt;&gt; Ok(Err(&quot;bad&quot;)).flatten()</span>
@@ -2600,17 +2600,11 @@ have been implemented, only the ones that make sense in the Python context.</p>
         <p>The contained <code>Ok</code> value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).ok_value
-2</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">ok_value</span>
+<span class="go">2</span>
+</code></pre></div>
+
     </div>
 
 </div>
@@ -2632,17 +2626,11 @@ have been implemented, only the ones that make sense in the Python context.</p>
         <p>Return <code>True</code> because this is an <code>Ok</code> value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).is_ok()
-True</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">is_ok</span><span class="p">()</span>
+<span class="go">True</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -2659,7 +2647,7 @@ True</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return ``True`` because this is an ``Ok`` value.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).is_ok()</span>
 <span class="sd">        True</span>
 
@@ -2685,17 +2673,11 @@ True</p>
         <p>Return <code>False</code> because this is an <code>Ok</code> value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).is_err()
-False</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">is_err</span><span class="p">()</span>
+<span class="go">False</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -2712,7 +2694,7 @@ False</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return ``False`` because this is an ``Ok`` value.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).is_err()</span>
 <span class="sd">        False</span>
 
@@ -2738,19 +2720,13 @@ False</p>
         <p>Return <code>True</code> if the result is <code>Ok</code> and the predicate <em>f</em> returns <code>True</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).is_ok_and(lambda x: x &gt; 1)
-True
-Ok(0).is_ok_and(lambda x: x &gt; 1)
-False</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">is_ok_and</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">is_ok_and</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">)</span>
+<span class="go">False</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -2769,7 +2745,7 @@ False</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return ``True`` if the result is ``Ok`` and the predicate *f* returns ``True``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).is_ok_and(lambda x: x &gt; 1)</span>
 <span class="sd">        True</span>
 <span class="sd">        &gt;&gt;&gt; Ok(0).is_ok_and(lambda x: x &gt; 1)</span>
@@ -2829,17 +2805,11 @@ False</p>
 <p>Since this is <code>Ok</code>, always returns <code>False</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).is_err_and(lambda e: True)
-False</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">is_err_and</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="kc">True</span><span class="p">)</span>
+<span class="go">False</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -2860,7 +2830,7 @@ False</p>
 
 <span class="sd">    Since this is ``Ok``, always returns ``False``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).is_err_and(lambda e: True)</span>
 <span class="sd">        False</span>
 
@@ -2927,17 +2897,11 @@ False</p>
 <p>Return the contained <code>Ok</code> value, discarding the error, if any.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).ok()
-2</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">ok</span><span class="p">()</span>
+<span class="go">2</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -2958,7 +2922,7 @@ False</p>
 
 <span class="sd">    Return the contained ``Ok`` value, discarding the error, if any.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).ok()</span>
 <span class="sd">        2</span>
 
@@ -2985,17 +2949,11 @@ False</p>
 <p>Return <code>None</code>, discarding the success value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).err() is None
-True</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">err</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3016,7 +2974,7 @@ True</p>
 
 <span class="sd">    Return ``None``, discarding the success value.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).err() is None</span>
 <span class="sd">        True</span>
 
@@ -3066,17 +3024,11 @@ True</p>
     </table>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).expect("must exist")
-2</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="s2">&quot;must exist&quot;</span><span class="p">)</span>
+<span class="go">2</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3103,7 +3055,7 @@ True</p>
 <span class="sd">    Raises:</span>
 <span class="sd">        UnwrapError: Never raised for ``Ok``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).expect(&quot;must exist&quot;)</span>
 <span class="sd">        2</span>
 
@@ -3153,19 +3105,13 @@ message including the passed <em>message</em> and the <code>Ok</code> content.</
     </table>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).expect_err("wanted an error")
-Traceback (most recent call last):
-    ...
-corrode.result.UnwrapError: wanted an error</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">expect_err</span><span class="p">(</span><span class="s2">&quot;wanted an error&quot;</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="w">    </span><span class="o">...</span>
+<span class="gr">corrode.result.UnwrapError</span>: <span class="n">wanted an error</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3192,7 +3138,7 @@ corrode.result.UnwrapError: wanted an error</p>
 <span class="sd">        UnwrapError: Always, because this is an ``Ok`` value, with a</span>
 <span class="sd">            message including the passed *message* and the ``Ok`` content.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).expect_err(&quot;wanted an error&quot;)</span>
 <span class="sd">        Traceback (most recent call last):</span>
 <span class="sd">            ...</span>
@@ -3244,17 +3190,11 @@ corrode.result.UnwrapError: wanted an error</p>
     </table>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).unwrap()
-2</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap</span><span class="p">()</span>
+<span class="go">2</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3281,7 +3221,7 @@ corrode.result.UnwrapError: wanted an error</p>
 <span class="sd">    Raises:</span>
 <span class="sd">        UnwrapError: Never raised for ``Ok``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).unwrap()</span>
 <span class="sd">        2</span>
 
@@ -3330,19 +3270,13 @@ corrode.result.UnwrapError: wanted an error</p>
     </table>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).unwrap_err()
-Traceback (most recent call last):
-    ...
-corrode.result.UnwrapError: Called <code>Result.unwrap_err()</code> on an <code>Ok</code> value</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_err</span><span class="p">()</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="w">    </span><span class="o">...</span>
+<span class="gr">corrode.result.UnwrapError</span>: <span class="n">Called `Result.unwrap_err()` on an `Ok` value</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3367,7 +3301,7 @@ corrode.result.UnwrapError: Called <code>Result.unwrap_err()</code> on an <code>
 <span class="sd">    Raises:</span>
 <span class="sd">        UnwrapError: Always, because this is an ``Ok`` value.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).unwrap_err()</span>
 <span class="sd">        Traceback (most recent call last):</span>
 <span class="sd">            ...</span>
@@ -3396,17 +3330,11 @@ corrode.result.UnwrapError: Called <code>Result.unwrap_err()</code> on an <code>
 <p>The default value is ignored because this is an <code>Ok</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).unwrap_or(0)
-2</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">2</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3427,7 +3355,7 @@ corrode.result.UnwrapError: Called <code>Result.unwrap_err()</code> on an <code>
 
 <span class="sd">    The default value is ignored because this is an ``Ok``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).unwrap_or(0)</span>
 <span class="sd">        2</span>
 
@@ -3454,17 +3382,11 @@ corrode.result.UnwrapError: Called <code>Result.unwrap_err()</code> on an <code>
 <p>The callable is never invoked because this is an <code>Ok</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).unwrap_or_else(len)
-2</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_or_else</span><span class="p">(</span><span class="nb">len</span><span class="p">)</span>
+<span class="go">2</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3485,7 +3407,7 @@ corrode.result.UnwrapError: Called <code>Result.unwrap_err()</code> on an <code>
 
 <span class="sd">    The callable is never invoked because this is an ``Ok``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).unwrap_or_else(len)</span>
 <span class="sd">        2</span>
 
@@ -3552,17 +3474,11 @@ corrode.result.UnwrapError: Called <code>Result.unwrap_err()</code> on an <code>
 <p>The exception is never raised because this is an <code>Ok</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).unwrap_or_raise(ValueError)
-2</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_or_raise</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">)</span>
+<span class="go">2</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3583,7 +3499,7 @@ corrode.result.UnwrapError: Called <code>Result.unwrap_err()</code> on an <code>
 
 <span class="sd">    The exception is never raised because this is an ``Ok``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).unwrap_or_raise(ValueError)</span>
 <span class="sd">        2</span>
 
@@ -3610,17 +3526,11 @@ corrode.result.UnwrapError: Called <code>Result.unwrap_err()</code> on an <code>
 <p>Map a <code>Result[T, E]</code> to <code>Result[U, E]</code>, leaving an <code>Err</code> value untouched.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).map(lambda x: x * 10)
-Ok(20)</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+<span class="go">Ok(20)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3641,7 +3551,7 @@ Ok(20)</p>
 
 <span class="sd">    Map a ``Result[T, E]`` to ``Result[U, E]``, leaving an ``Err`` value untouched.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).map(lambda x: x * 10)</span>
 <span class="sd">        Ok(20)</span>
 
@@ -3708,17 +3618,11 @@ Ok(20)</p>
 <p>Since this is <code>Ok</code>, <em>default</em> is ignored.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).map_or(0, lambda x: x * 10)
-20</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">map_or</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+<span class="go">20</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3739,7 +3643,7 @@ Ok(20)</p>
 
 <span class="sd">    Since this is ``Ok``, *default* is ignored.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).map_or(0, lambda x: x * 10)</span>
 <span class="sd">        20</span>
 
@@ -3806,17 +3710,11 @@ Ok(20)</p>
 <p>Map a <code>Result[T, E]</code> to <code>U</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).map_or_else(lambda e: 0, lambda x: x * 10)
-20</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">map_or_else</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+<span class="go">20</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3837,7 +3735,7 @@ Ok(20)</p>
 
 <span class="sd">    Map a ``Result[T, E]`` to ``U``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).map_or_else(lambda e: 0, lambda x: x * 10)</span>
 <span class="sd">        20</span>
 
@@ -3912,17 +3810,11 @@ Ok(20)</p>
 <p>Map a <code>Result[T, E]</code> to <code>Result[T, F]</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).map_err(str.upper)
-Ok(2)</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">map_err</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">upper</span><span class="p">)</span>
+<span class="go">Ok(2)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -3943,7 +3835,7 @@ Ok(2)</p>
 
 <span class="sd">    Map a ``Result[T, E]`` to ``Result[T, F]``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).map_err(str.upper)</span>
 <span class="sd">        Ok(2)</span>
 
@@ -4010,21 +3902,15 @@ Ok(2)</p>
 <p>This function can be used for control flow based on <code>Result</code> values.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>def halve(x: int) -&gt; Result[int, str]:
-...     return Ok(x // 2) if x % 2 == 0 else Err("odd")
-Ok(4).and_then(halve)
-Ok(2)
-Ok(3).and_then(halve)
-Err('odd')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">halve</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">x</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="o">%</span> <span class="mi">2</span> <span class="o">==</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;odd&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span><span class="o">.</span><span class="n">and_then</span><span class="p">(</span><span class="n">halve</span><span class="p">)</span>
+<span class="go">Ok(2)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span><span class="o">.</span><span class="n">and_then</span><span class="p">(</span><span class="n">halve</span><span class="p">)</span>
+<span class="go">Err(&#39;odd&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -4049,7 +3935,7 @@ Err('odd')</p>
 
 <span class="sd">    This function can be used for control flow based on ``Result`` values.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; def halve(x: int) -&gt; Result[int, str]:</span>
 <span class="sd">        ...     return Ok(x // 2) if x % 2 == 0 else Err(&quot;odd&quot;)</span>
 <span class="sd">        &gt;&gt;&gt; Ok(4).and_then(halve)</span>
@@ -4126,17 +4012,11 @@ Err('odd')</p>
 <p>Since this is <code>Ok</code>, <em>op</em> is never called.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).or_else(lambda e: Ok(0))
-Ok(2)</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">or_else</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">0</span><span class="p">))</span>
+<span class="go">Ok(2)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -4157,7 +4037,7 @@ Ok(2)</p>
 
 <span class="sd">    Since this is ``Ok``, *op* is never called.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).or_else(lambda e: Ok(0))</span>
 <span class="sd">        Ok(2)</span>
 
@@ -4224,18 +4104,12 @@ Ok(2)</p>
 <p>Return the original result unchanged.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).inspect(print)
-2
-Ok(2)</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="nb">print</span><span class="p">)</span>
+<span class="go">2</span>
+<span class="go">Ok(2)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -4258,7 +4132,7 @@ Ok(2)</p>
 
 <span class="sd">    Return the original result unchanged.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).inspect(print)</span>
 <span class="sd">        2</span>
 <span class="sd">        Ok(2)</span>
@@ -4338,17 +4212,11 @@ Return the original result unchanged.</p>
 <p>Return the original result unchanged. Since this is <code>Ok</code>, <em>op</em> is not called.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(2).inspect_err(print)
-Ok(2)</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">inspect_err</span><span class="p">(</span><span class="nb">print</span><span class="p">)</span>
+<span class="go">Ok(2)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -4369,7 +4237,7 @@ Ok(2)</p>
 
 <span class="sd">    Return the original result unchanged. Since this is ``Ok``, *op* is not called.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(2).inspect_err(print)</span>
 <span class="sd">        Ok(2)</span>
 
@@ -4454,21 +4322,15 @@ Ok(2)</p>
 Returns the first <code>Err</code> encountered otherwise.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(1).zip(Ok("a"))
-Ok((1, 'a'))
-Ok(1).zip(Ok("a"), Ok(3.0))
-Ok((1, 'a', 3.0))
-Ok(1).zip(Err("bad"))
-Err('bad')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">Ok</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">))</span>
+<span class="go">Ok((1, &#39;a&#39;))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">Ok</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">),</span> <span class="n">Ok</span><span class="p">(</span><span class="mf">3.0</span><span class="p">))</span>
+<span class="go">Ok((1, &#39;a&#39;, 3.0))</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;bad&quot;</span><span class="p">))</span>
+<span class="go">Err(&#39;bad&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -4502,7 +4364,7 @@ Err('bad')</p>
 <span class="sd">    Returns ``Ok`` of a tuple of all values if all results are ``Ok``.</span>
 <span class="sd">    Returns the first ``Err`` encountered otherwise.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(1).zip(Ok(&quot;a&quot;))</span>
 <span class="sd">        Ok((1, &#39;a&#39;))</span>
 <span class="sd">        &gt;&gt;&gt; Ok(1).zip(Ok(&quot;a&quot;), Ok(3.0))</span>
@@ -4541,19 +4403,13 @@ Err('bad')</p>
 Only one level is removed — <code>Ok(Ok(Ok(1))).flatten()</code> is <code>Ok(Ok(1))</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Ok(Ok(1)).flatten()
-Ok(1)
-Ok(Err("bad")).flatten()
-Err('bad')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+<span class="go">Ok(1)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Ok</span><span class="p">(</span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;bad&quot;</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+<span class="go">Err(&#39;bad&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -4578,7 +4434,7 @@ Err('bad')</p>
 <span class="sd">    Convert ``Result[Result[U, F], E]`` into ``Result[U, F]``.</span>
 <span class="sd">    Only one level is removed — ``Ok(Ok(Ok(1))).flatten()`` is ``Ok(Ok(1))``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Ok(Ok(1)).flatten()</span>
 <span class="sd">        Ok(1)</span>
 <span class="sd">        &gt;&gt;&gt; Ok(Err(&quot;bad&quot;)).flatten()</span>
@@ -5223,7 +5079,7 @@ Err('bad')</p>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return ``False`` because this is an ``Err`` value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).is_ok()</span>
 <span class="sd">            False</span>
 
@@ -5234,7 +5090,7 @@ Err('bad')</p>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return ``True`` because this is an ``Err`` value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).is_err()</span>
 <span class="sd">            True</span>
 
@@ -5247,7 +5103,7 @@ Err('bad')</p>
 
 <span class="sd">        Since this is ``Err``, always returns ``False``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).is_ok_and(lambda x: True)</span>
 <span class="sd">            False</span>
 
@@ -5266,7 +5122,7 @@ Err('bad')</p>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Return ``True`` if the result is ``Err`` and the predicate *f* returns ``True``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).is_err_and(lambda e: &quot;boo&quot; in e)</span>
 <span class="sd">            True</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).is_err_and(lambda e: e == &quot;x&quot;)</span>
@@ -5285,7 +5141,7 @@ Err('bad')</p>
 
 <span class="sd">        Return ``None``, discarding the error value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).ok() is None</span>
 <span class="sd">            True</span>
 
@@ -5298,7 +5154,7 @@ Err('bad')</p>
 
 <span class="sd">        Return the contained ``Err`` value, discarding the success value, if any.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).err()</span>
 <span class="sd">            &#39;boom&#39;</span>
 
@@ -5310,7 +5166,7 @@ Err('bad')</p>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        The contained ``Err`` value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).err_value</span>
 <span class="sd">            &#39;boom&#39;</span>
 
@@ -5325,7 +5181,7 @@ Err('bad')</p>
 <span class="sd">            UnwrapError: Always, because this is an ``Err`` value, with a</span>
 <span class="sd">                message including the passed *message* and the ``Err`` content.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).expect(&quot;must exist&quot;)</span>
 <span class="sd">            Traceback (most recent call last):</span>
 <span class="sd">                ...</span>
@@ -5349,7 +5205,7 @@ Err('bad')</p>
 <span class="sd">        Raises:</span>
 <span class="sd">            UnwrapError: Never raised for ``Err``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).expect_err(&quot;wanted an error&quot;)</span>
 <span class="sd">            &#39;boom&#39;</span>
 
@@ -5364,7 +5220,7 @@ Err('bad')</p>
 <span class="sd">            UnwrapError: Always, because this is an ``Err`` value, with a</span>
 <span class="sd">                message provided by the ``Err`` content.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap()</span>
 <span class="sd">            Traceback (most recent call last):</span>
 <span class="sd">                ...</span>
@@ -5388,7 +5244,7 @@ Err('bad')</p>
 <span class="sd">        Raises:</span>
 <span class="sd">            UnwrapError: Never raised for ``Err``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap_err()</span>
 <span class="sd">            &#39;boom&#39;</span>
 
@@ -5401,7 +5257,7 @@ Err('bad')</p>
 
 <span class="sd">        The contained ``Err`` value is discarded.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap_or(0)</span>
 <span class="sd">            0</span>
 
@@ -5414,7 +5270,7 @@ Err('bad')</p>
 
 <span class="sd">        The callable *op* is applied to the contained ``Err`` value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap_or_else(len)</span>
 <span class="sd">            4</span>
 
@@ -5435,7 +5291,7 @@ Err('bad')</p>
 
 <span class="sd">        The exception *e* is instantiated with the ``Err`` value and raised.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap_or_raise(ValueError)</span>
 <span class="sd">            Traceback (most recent call last):</span>
 <span class="sd">                ...</span>
@@ -5450,7 +5306,7 @@ Err('bad')</p>
 
 <span class="sd">        Map a ``Result[T, E]`` to ``Result[U, E]``, leaving an ``Err`` value untouched.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).map(lambda x: x * 10)</span>
 <span class="sd">            Err(&#39;boom&#39;)</span>
 
@@ -5471,7 +5327,7 @@ Err('bad')</p>
 
 <span class="sd">        Since this is ``Err``, *op* is ignored and *default* is returned.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).map_or(0, lambda x: x * 10)</span>
 <span class="sd">            0</span>
 
@@ -5492,7 +5348,7 @@ Err('bad')</p>
 
 <span class="sd">        Map a ``Result[T, E]`` to ``U``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).map_or_else(len, lambda x: x * 10)</span>
 <span class="sd">            4</span>
 
@@ -5517,7 +5373,7 @@ Err('bad')</p>
 
 <span class="sd">        Map a ``Result[T, E]`` to ``Result[T, F]``.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).map_err(str.upper)</span>
 <span class="sd">            Err(&#39;BOOM&#39;)</span>
 
@@ -5538,7 +5394,7 @@ Err('bad')</p>
 
 <span class="sd">        This function can be used for control flow based on ``Result`` values.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).and_then(lambda x: Ok(x * 10))</span>
 <span class="sd">            Err(&#39;boom&#39;)</span>
 
@@ -5559,7 +5415,7 @@ Err('bad')</p>
 
 <span class="sd">        Since this is ``Err``, *op* is called with the error value.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).or_else(lambda e: Ok(len(e)))</span>
 <span class="sd">            Ok(4)</span>
 
@@ -5583,7 +5439,7 @@ Err('bad')</p>
 
 <span class="sd">        Return the original result unchanged. Since this is ``Err``, *op* is not called.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).inspect(print)</span>
 <span class="sd">            Err(&#39;boom&#39;)</span>
 
@@ -5604,7 +5460,7 @@ Err('bad')</p>
 
 <span class="sd">        Return the original result unchanged.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;boom&quot;).inspect_err(print)</span>
 <span class="sd">            boom</span>
 <span class="sd">            Err(&#39;boom&#39;)</span>
@@ -5632,7 +5488,7 @@ Err('bad')</p>
 
 <span class="sd">        Since this is an ``Err``, always returns ``self`` without inspecting the others.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;bad&quot;).zip(Ok(1))</span>
 <span class="sd">            Err(&#39;bad&#39;)</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;bad&quot;).zip(Ok(1), Ok(2))</span>
@@ -5647,7 +5503,7 @@ Err('bad')</p>
 
 <span class="sd">        Since this is an ``Err``, there is nothing to flatten — ``self`` is returned.</span>
 
-<span class="sd">        Example:</span>
+<span class="sd">        Examples:</span>
 <span class="sd">            &gt;&gt;&gt; Err(&quot;bad&quot;).flatten()</span>
 <span class="sd">            Err(&#39;bad&#39;)</span>
 
@@ -5685,17 +5541,11 @@ Err('bad')</p>
         <p>The contained <code>Err</code> value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").err_value
-'boom'</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">err_value</span>
+<span class="go">&#39;boom&#39;</span>
+</code></pre></div>
+
     </div>
 
 </div>
@@ -5717,17 +5567,11 @@ Err('bad')</p>
         <p>Return <code>False</code> because this is an <code>Err</code> value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").is_ok()
-False</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_ok</span><span class="p">()</span>
+<span class="go">False</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -5744,7 +5588,7 @@ False</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return ``False`` because this is an ``Err`` value.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).is_ok()</span>
 <span class="sd">        False</span>
 
@@ -5770,17 +5614,11 @@ False</p>
         <p>Return <code>True</code> because this is an <code>Err</code> value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").is_err()
-True</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_err</span><span class="p">()</span>
+<span class="go">True</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -5797,7 +5635,7 @@ True</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return ``True`` because this is an ``Err`` value.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).is_err()</span>
 <span class="sd">        True</span>
 
@@ -5824,17 +5662,11 @@ True</p>
 <p>Since this is <code>Err</code>, always returns <code>False</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").is_ok_and(lambda x: True)
-False</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_ok_and</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="kc">True</span><span class="p">)</span>
+<span class="go">False</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -5855,7 +5687,7 @@ False</p>
 
 <span class="sd">    Since this is ``Err``, always returns ``False``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).is_ok_and(lambda x: True)</span>
 <span class="sd">        False</span>
 
@@ -5921,19 +5753,13 @@ False</p>
         <p>Return <code>True</code> if the result is <code>Err</code> and the predicate <em>f</em> returns <code>True</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").is_err_and(lambda e: "boo" in e)
-True
-Err("boom").is_err_and(lambda e: e == "x")
-False</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_err_and</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="s2">&quot;boo&quot;</span> <span class="ow">in</span> <span class="n">e</span><span class="p">)</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_err_and</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">e</span> <span class="o">==</span> <span class="s2">&quot;x&quot;</span><span class="p">)</span>
+<span class="go">False</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -5952,7 +5778,7 @@ False</p>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Return ``True`` if the result is ``Err`` and the predicate *f* returns ``True``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).is_err_and(lambda e: &quot;boo&quot; in e)</span>
 <span class="sd">        True</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).is_err_and(lambda e: e == &quot;x&quot;)</span>
@@ -6012,17 +5838,11 @@ False</p>
 <p>Return <code>None</code>, discarding the error value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").ok() is None
-True</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">ok</span><span class="p">()</span> <span class="ow">is</span> <span class="kc">None</span>
+<span class="go">True</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6043,7 +5863,7 @@ True</p>
 
 <span class="sd">    Return ``None``, discarding the error value.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).ok() is None</span>
 <span class="sd">        True</span>
 
@@ -6070,17 +5890,11 @@ True</p>
 <p>Return the contained <code>Err</code> value, discarding the success value, if any.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").err()
-'boom'</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">err</span><span class="p">()</span>
+<span class="go">&#39;boom&#39;</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6101,7 +5915,7 @@ True</p>
 
 <span class="sd">    Return the contained ``Err`` value, discarding the success value, if any.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).err()</span>
 <span class="sd">        &#39;boom&#39;</span>
 
@@ -6151,19 +5965,13 @@ message including the passed <em>message</em> and the <code>Err</code> content.<
     </table>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").expect("must exist")
-Traceback (most recent call last):
-    ...
-corrode.result.UnwrapError: must exist: 'boom'</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">expect</span><span class="p">(</span><span class="s2">&quot;must exist&quot;</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="w">    </span><span class="o">...</span>
+<span class="gr">corrode.result.UnwrapError</span>: <span class="n">must exist: &#39;boom&#39;</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6196,7 +6004,7 @@ corrode.result.UnwrapError: must exist: 'boom'</p>
 <span class="sd">        UnwrapError: Always, because this is an ``Err`` value, with a</span>
 <span class="sd">            message including the passed *message* and the ``Err`` content.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).expect(&quot;must exist&quot;)</span>
 <span class="sd">        Traceback (most recent call last):</span>
 <span class="sd">            ...</span>
@@ -6254,17 +6062,11 @@ corrode.result.UnwrapError: must exist: 'boom'</p>
     </table>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").expect_err("wanted an error")
-'boom'</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">expect_err</span><span class="p">(</span><span class="s2">&quot;wanted an error&quot;</span><span class="p">)</span>
+<span class="go">&#39;boom&#39;</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6291,7 +6093,7 @@ corrode.result.UnwrapError: must exist: 'boom'</p>
 <span class="sd">    Raises:</span>
 <span class="sd">        UnwrapError: Never raised for ``Err``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).expect_err(&quot;wanted an error&quot;)</span>
 <span class="sd">        &#39;boom&#39;</span>
 
@@ -6341,19 +6143,13 @@ message provided by the <code>Err</code> content.</p>
     </table>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").unwrap()
-Traceback (most recent call last):
-    ...
-corrode.result.UnwrapError: Called <code>Result.unwrap()</code> on an <code>Err</code> value: 'boom'</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap</span><span class="p">()</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="w">    </span><span class="o">...</span>
+<span class="gr">corrode.result.UnwrapError</span>: <span class="n">Called `Result.unwrap()` on an `Err` value: &#39;boom&#39;</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6386,7 +6182,7 @@ corrode.result.UnwrapError: Called <code>Result.unwrap()</code> on an <code>Err<
 <span class="sd">        UnwrapError: Always, because this is an ``Err`` value, with a</span>
 <span class="sd">            message provided by the ``Err`` content.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap()</span>
 <span class="sd">        Traceback (most recent call last):</span>
 <span class="sd">            ...</span>
@@ -6444,17 +6240,11 @@ corrode.result.UnwrapError: Called <code>Result.unwrap()</code> on an <code>Err<
     </table>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").unwrap_err()
-'boom'</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_err</span><span class="p">()</span>
+<span class="go">&#39;boom&#39;</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6481,7 +6271,7 @@ corrode.result.UnwrapError: Called <code>Result.unwrap()</code> on an <code>Err<
 <span class="sd">    Raises:</span>
 <span class="sd">        UnwrapError: Never raised for ``Err``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap_err()</span>
 <span class="sd">        &#39;boom&#39;</span>
 
@@ -6508,17 +6298,11 @@ corrode.result.UnwrapError: Called <code>Result.unwrap()</code> on an <code>Err<
 <p>The contained <code>Err</code> value is discarded.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").unwrap_or(0)
-0</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+<span class="go">0</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6539,7 +6323,7 @@ corrode.result.UnwrapError: Called <code>Result.unwrap()</code> on an <code>Err<
 
 <span class="sd">    The contained ``Err`` value is discarded.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap_or(0)</span>
 <span class="sd">        0</span>
 
@@ -6566,17 +6350,11 @@ corrode.result.UnwrapError: Called <code>Result.unwrap()</code> on an <code>Err<
 <p>The callable <em>op</em> is applied to the contained <code>Err</code> value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").unwrap_or_else(len)
-4</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_or_else</span><span class="p">(</span><span class="nb">len</span><span class="p">)</span>
+<span class="go">4</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6597,7 +6375,7 @@ corrode.result.UnwrapError: Called <code>Result.unwrap()</code> on an <code>Err<
 
 <span class="sd">    The callable *op* is applied to the contained ``Err`` value.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap_or_else(len)</span>
 <span class="sd">        4</span>
 
@@ -6664,19 +6442,13 @@ corrode.result.UnwrapError: Called <code>Result.unwrap()</code> on an <code>Err<
 <p>The exception <em>e</em> is instantiated with the <code>Err</code> value and raised.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").unwrap_or_raise(ValueError)
-Traceback (most recent call last):
-    ...
-ValueError: boom</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_or_raise</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">)</span>
+<span class="gt">Traceback (most recent call last):</span>
+<span class="w">    </span><span class="o">...</span>
+<span class="gr">ValueError</span>: <span class="n">boom</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6699,7 +6471,7 @@ ValueError: boom</p>
 
 <span class="sd">    The exception *e* is instantiated with the ``Err`` value and raised.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).unwrap_or_raise(ValueError)</span>
 <span class="sd">        Traceback (most recent call last):</span>
 <span class="sd">            ...</span>
@@ -6728,17 +6500,11 @@ ValueError: boom</p>
 <p>Map a <code>Result[T, E]</code> to <code>Result[U, E]</code>, leaving an <code>Err</code> value untouched.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").map(lambda x: x * 10)
-Err('boom')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+<span class="go">Err(&#39;boom&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6759,7 +6525,7 @@ Err('boom')</p>
 
 <span class="sd">    Map a ``Result[T, E]`` to ``Result[U, E]``, leaving an ``Err`` value untouched.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).map(lambda x: x * 10)</span>
 <span class="sd">        Err(&#39;boom&#39;)</span>
 
@@ -6826,17 +6592,11 @@ Err('boom')</p>
 <p>Since this is <code>Err</code>, <em>op</em> is ignored and <em>default</em> is returned.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").map_or(0, lambda x: x * 10)
-0</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map_or</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+<span class="go">0</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6857,7 +6617,7 @@ Err('boom')</p>
 
 <span class="sd">    Since this is ``Err``, *op* is ignored and *default* is returned.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).map_or(0, lambda x: x * 10)</span>
 <span class="sd">        0</span>
 
@@ -6924,17 +6684,11 @@ Err('boom')</p>
 <p>Map a <code>Result[T, E]</code> to <code>U</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").map_or_else(len, lambda x: x * 10)
-4</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map_or_else</span><span class="p">(</span><span class="nb">len</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
+<span class="go">4</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -6955,7 +6709,7 @@ Err('boom')</p>
 
 <span class="sd">    Map a ``Result[T, E]`` to ``U``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).map_or_else(len, lambda x: x * 10)</span>
 <span class="sd">        4</span>
 
@@ -7030,17 +6784,11 @@ Err('boom')</p>
 <p>Map a <code>Result[T, E]</code> to <code>Result[T, F]</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").map_err(str.upper)
-Err('BOOM')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map_err</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">upper</span><span class="p">)</span>
+<span class="go">Err(&#39;BOOM&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -7061,7 +6809,7 @@ Err('BOOM')</p>
 
 <span class="sd">    Map a ``Result[T, E]`` to ``Result[T, F]``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).map_err(str.upper)</span>
 <span class="sd">        Err(&#39;BOOM&#39;)</span>
 
@@ -7128,17 +6876,11 @@ Err('BOOM')</p>
 <p>This function can be used for control flow based on <code>Result</code> values.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").and_then(lambda x: Ok(x * 10))
-Err('boom')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">and_then</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">Ok</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="mi">10</span><span class="p">))</span>
+<span class="go">Err(&#39;boom&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -7159,7 +6901,7 @@ Err('boom')</p>
 
 <span class="sd">    This function can be used for control flow based on ``Result`` values.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).and_then(lambda x: Ok(x * 10))</span>
 <span class="sd">        Err(&#39;boom&#39;)</span>
 
@@ -7226,17 +6968,11 @@ Err('boom')</p>
 <p>Since this is <code>Err</code>, <em>op</em> is called with the error value.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").or_else(lambda e: Ok(len(e)))
-Ok(4)</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">or_else</span><span class="p">(</span><span class="k">lambda</span> <span class="n">e</span><span class="p">:</span> <span class="n">Ok</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">e</span><span class="p">)))</span>
+<span class="go">Ok(4)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -7257,7 +6993,7 @@ Ok(4)</p>
 
 <span class="sd">    Since this is ``Err``, *op* is called with the error value.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).or_else(lambda e: Ok(len(e)))</span>
 <span class="sd">        Ok(4)</span>
 
@@ -7330,17 +7066,11 @@ Ok(4)</p>
 <p>Return the original result unchanged. Since this is <code>Err</code>, <em>op</em> is not called.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").inspect(print)
-Err('boom')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">inspect</span><span class="p">(</span><span class="nb">print</span><span class="p">)</span>
+<span class="go">Err(&#39;boom&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -7361,7 +7091,7 @@ Err('boom')</p>
 
 <span class="sd">    Return the original result unchanged. Since this is ``Err``, *op* is not called.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).inspect(print)</span>
 <span class="sd">        Err(&#39;boom&#39;)</span>
 
@@ -7428,18 +7158,12 @@ Err('boom')</p>
 <p>Return the original result unchanged.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("boom").inspect_err(print)
-boom
-Err('boom')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">inspect_err</span><span class="p">(</span><span class="nb">print</span><span class="p">)</span>
+<span class="go">boom</span>
+<span class="go">Err(&#39;boom&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -7462,7 +7186,7 @@ Err('boom')</p>
 
 <span class="sd">    Return the original result unchanged.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;boom&quot;).inspect_err(print)</span>
 <span class="sd">        boom</span>
 <span class="sd">        Err(&#39;boom&#39;)</span>
@@ -7542,19 +7266,13 @@ Return the original result unchanged.</p>
 <p>Since this is an <code>Err</code>, always returns <code>self</code> without inspecting the others.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("bad").zip(Ok(1))
-Err('bad')
-Err("bad").zip(Ok(1), Ok(2))
-Err('bad')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;bad&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="go">Err(&#39;bad&#39;)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;bad&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">2</span><span class="p">))</span>
+<span class="go">Err(&#39;bad&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -7577,7 +7295,7 @@ Err('bad')</p>
 
 <span class="sd">    Since this is an ``Err``, always returns ``self`` without inspecting the others.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;bad&quot;).zip(Ok(1))</span>
 <span class="sd">        Err(&#39;bad&#39;)</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;bad&quot;).zip(Ok(1), Ok(2))</span>
@@ -7606,17 +7324,11 @@ Err('bad')</p>
 <p>Since this is an <code>Err</code>, there is nothing to flatten — <code>self</code> is returned.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>Err("bad").flatten()
-Err('bad')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;bad&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+<span class="go">Err(&#39;bad&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -7637,7 +7349,7 @@ Err('bad')</p>
 
 <span class="sd">    Since this is an ``Err``, there is nothing to flatten — ``self`` is returned.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; Err(&quot;bad&quot;).flatten()</span>
 <span class="sd">        Err(&#39;bad&#39;)</span>
 
@@ -7797,22 +7509,16 @@ exceptions of the specified exception type(s) are turned into <code>Err(exc)</co
 propagate — swallowing them breaks interrupts and task cancellation.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>@as_result(ValueError)
-... def parse(s: str) -&gt; int:
-...     return int(s)
-parse("42")
-Ok(42)
-parse("x").map_err(type)
-Err(<class 'ValueError'>)</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="nd">@as_result</span><span class="p">(</span><span class="ne">ValueError</span><span class="p">)</span>
+<span class="gp">... </span><span class="k">def</span><span class="w"> </span><span class="nf">parse</span><span class="p">(</span><span class="n">s</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;42&quot;</span><span class="p">)</span>
+<span class="go">Ok(42)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">parse</span><span class="p">(</span><span class="s2">&quot;x&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map_err</span><span class="p">(</span><span class="nb">type</span><span class="p">)</span>
+<span class="go">Err(&lt;class &#39;ValueError&#39;&gt;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -7868,7 +7574,7 @@ Err(<class 'ValueError'>)</p>
 <span class="sd">    (``KeyboardInterrupt``, ``SystemExit``, ``asyncio.CancelledError``) must</span>
 <span class="sd">    propagate — swallowing them breaks interrupts and task cancellation.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; @as_result(ValueError)</span>
 <span class="sd">        ... def parse(s: str) -&gt; int:</span>
 <span class="sd">        ...     return int(s)</span>
@@ -8025,19 +7731,13 @@ This is the bridge from the idiomatic Python "optional" pattern into
 valid success value for you, construct the <code>Result</code> explicitly.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>from_optional(42, "missing")
-Ok(42)
-from_optional(None, "missing")
-Err('missing')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">from_optional</span><span class="p">(</span><span class="mi">42</span><span class="p">,</span> <span class="s2">&quot;missing&quot;</span><span class="p">)</span>
+<span class="go">Ok(42)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">from_optional</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="s2">&quot;missing&quot;</span><span class="p">)</span>
+<span class="go">Err(&#39;missing&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -8068,7 +7768,7 @@ Err('missing')</p>
 <span class="sd">    ``Result``. Note that ``Ok(None)`` cannot be produced — if ``None`` is a</span>
 <span class="sd">    valid success value for you, construct the ``Result`` explicitly.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; from_optional(42, &quot;missing&quot;)</span>
 <span class="sd">        Ok(42)</span>
 <span class="sd">        &gt;&gt;&gt; from_optional(None, &quot;missing&quot;)</span>
@@ -8100,19 +7800,13 @@ Err('missing')</p>
 <code>None</code> — use it when constructing the error is expensive.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>from_optional_or_else(42, lambda: "missing")
-Ok(42)
-from_optional_or_else(None, lambda: "missing")
-Err('missing')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">from_optional_or_else</span><span class="p">(</span><span class="mi">42</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="s2">&quot;missing&quot;</span><span class="p">)</span>
+<span class="go">Ok(42)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">from_optional_or_else</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="s2">&quot;missing&quot;</span><span class="p">)</span>
+<span class="go">Err(&#39;missing&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -8139,7 +7833,7 @@ Err('missing')</p>
 <span class="sd">    Like ``from_optional``, but *error_fn* is only called when *value* is</span>
 <span class="sd">    ``None`` — use it when constructing the error is expensive.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; from_optional_or_else(42, lambda: &quot;missing&quot;)</span>
 <span class="sd">        Ok(42)</span>
 <span class="sd">        &gt;&gt;&gt; from_optional_or_else(None, lambda: &quot;missing&quot;)</span>
@@ -8176,19 +7870,13 @@ elif is_err(r):
 </code></pre></div>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>is_ok(Ok(1))
-True
-is_ok(Err("boom"))
-False</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">is_ok</span><span class="p">(</span><span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">is_ok</span><span class="p">(</span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">))</span>
+<span class="go">False</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -8223,7 +7911,7 @@ False</p>
 <span class="sd">        elif is_err(r):</span>
 <span class="sd">            r  # r is of type Err[str]</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; is_ok(Ok(1))</span>
 <span class="sd">        True</span>
 <span class="sd">        &gt;&gt;&gt; is_ok(Err(&quot;boom&quot;))</span>
@@ -8258,19 +7946,13 @@ elif is_err(r):
 </code></pre></div>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>is_err(Err("boom"))
-True
-is_err(Ok(1))
-False</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="n">is_err</span><span class="p">(</span><span class="n">Err</span><span class="p">(</span><span class="s2">&quot;boom&quot;</span><span class="p">))</span>
+<span class="go">True</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">is_err</span><span class="p">(</span><span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+<span class="go">False</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/result.py</code></summary>
@@ -8305,7 +7987,7 @@ False</p>
 <span class="sd">        elif is_err(r):</span>
 <span class="sd">            r  # r is of type Err[str]</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; is_err(Err(&quot;boom&quot;))</span>
 <span class="sd">        True</span>
 <span class="sd">        &gt;&gt;&gt; is_err(Ok(1))</span>

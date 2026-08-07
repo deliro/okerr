@@ -707,43 +707,32 @@ One failure is a group of one: the exception type you catch never depends
 on timing. Handle with <code>except*</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>import asyncio
-async def fetch(i: int) -&gt; Result[int, str]:
-...     return Ok(i) if i &gt; 0 else Err("bad")
-asyncio.run(collect([fetch(1), fetch(2), fetch(3)]))
-Ok([1, 2, 3])
-asyncio.run(collect([fetch(1), fetch(0)], concurrency=4))
-Err('bad')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-<p>Raised exceptions always arrive as an <code>ExceptionGroup</code> — one failure
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">(</span><span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;bad&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">collect</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">3</span><span class="p">)]))</span>
+<span class="go">Ok([1, 2, 3])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">collect</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">0</span><span class="p">)],</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+<span class="go">Err(&#39;bad&#39;)</span>
+</code></pre></div>
+    <p>Raised exceptions always arrive as an <code>ExceptionGroup</code> — one failure
 is a group of one, several failures are collected together:</p>
-<blockquote>
-<blockquote>
-<blockquote>
-<p>async def broken(source: str) -&gt; Result[int, str]:
-...     raise ConnectionError(source)
-async def demo(sources: list[str]) -&gt; list[str]:
-...     errors: list[str] = []
-...     try:
-...         await collect([broken(s) for s in sources])
-...     except* ConnectionError as group:
-...         errors = sorted(str(e) for e in group.exceptions)
-...     return errors
-asyncio.run(demo(["eu"]))
-['eu']
-asyncio.run(demo(["eu", "us"]))
-['eu', 'us']</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">broken</span><span class="p">(</span><span class="n">source</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">raise</span> <span class="ne">ConnectionError</span><span class="p">(</span><span class="n">source</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">demo</span><span class="p">(</span><span class="n">sources</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="n">errors</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+<span class="gp">... </span>    <span class="k">try</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="k">await</span> <span class="n">collect</span><span class="p">([</span><span class="n">broken</span><span class="p">(</span><span class="n">s</span><span class="p">)</span> <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sources</span><span class="p">])</span>
+<span class="gp">... </span>    <span class="k">except</span><span class="o">*</span> <span class="ne">ConnectionError</span> <span class="k">as</span> <span class="n">group</span><span class="p">:</span>
+<span class="gp">... </span>        <span class="n">errors</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span> <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="n">group</span><span class="o">.</span><span class="n">exceptions</span><span class="p">)</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">errors</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">demo</span><span class="p">([</span><span class="s2">&quot;eu&quot;</span><span class="p">]))</span>
+<span class="go">[&#39;eu&#39;]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">demo</span><span class="p">([</span><span class="s2">&quot;eu&quot;</span><span class="p">,</span> <span class="s2">&quot;us&quot;</span><span class="p">]))</span>
+<span class="go">[&#39;eu&#39;, &#39;us&#39;]</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/async_iterator.py</code></summary>
@@ -840,7 +829,7 @@ asyncio.run(demo(["eu", "us"]))
 <span class="sd">    One failure is a group of one: the exception type you catch never depends</span>
 <span class="sd">    on timing. Handle with ``except*``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; import asyncio</span>
 <span class="sd">        &gt;&gt;&gt; async def fetch(i: int) -&gt; Result[int, str]:</span>
 <span class="sd">        ...     return Ok(i) if i &gt; 0 else Err(&quot;bad&quot;)</span>
@@ -927,20 +916,14 @@ One failure is a group of one: the exception type you catch never depends
 on timing. Handle with <code>except*</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>import asyncio
-async def double(x: int) -&gt; Result[int, str]:
-...     return Ok(x * 2)
-asyncio.run(map_collect([1, 2, 3], double, concurrency=2))
-Ok([2, 4, 6])</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">double</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">x</span> <span class="o">*</span> <span class="mi">2</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">map_collect</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="n">double</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="go">Ok([2, 4, 6])</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/async_iterator.py</code></summary>
@@ -997,7 +980,7 @@ Ok([2, 4, 6])</p>
 <span class="sd">    One failure is a group of one: the exception type you catch never depends</span>
 <span class="sd">    on timing. Handle with ``except*``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; import asyncio</span>
 <span class="sd">        &gt;&gt;&gt; async def double(x: int) -&gt; Result[int, str]:</span>
 <span class="sd">        ...     return Ok(x * 2)</span>
@@ -1042,20 +1025,14 @@ One failure is a group of one: the exception type you catch never depends
 on timing. Handle with <code>except*</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>import asyncio
-async def fetch(i: int) -&gt; Result[int, str]:
-...     return Ok(i) if i &gt; 0 else Err(f"bad: {i}")
-asyncio.run(partition([fetch(1), fetch(-1), fetch(2)]))
-([1, 2], ['bad: -1'])</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">(</span><span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">Err</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;bad: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">partition</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">)]))</span>
+<span class="go">([1, 2], [&#39;bad: -1&#39;])</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/async_iterator.py</code></summary>
@@ -1136,7 +1113,7 @@ asyncio.run(partition([fetch(1), fetch(-1), fetch(2)]))
 <span class="sd">    One failure is a group of one: the exception type you catch never depends</span>
 <span class="sd">    on timing. Handle with ``except*``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; import asyncio</span>
 <span class="sd">        &gt;&gt;&gt; async def fetch(i: int) -&gt; Result[int, str]:</span>
 <span class="sd">        ...     return Ok(i) if i &gt; 0 else Err(f&quot;bad: {i}&quot;)</span>
@@ -1207,20 +1184,14 @@ One failure is a group of one: the exception type you catch never depends
 on timing. Handle with <code>except*</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>import asyncio
-async def check(i: int) -&gt; Result[int, str]:
-...     return Ok(i) if i &gt; 0 else Err(f"bad: {i}")
-asyncio.run(map_partition([1, -1, 2], check, concurrency=2))
-([1, 2], ['bad: -1'])</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">check</span><span class="p">(</span><span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">Err</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;bad: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">map_partition</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span> <span class="n">check</span><span class="p">,</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">2</span><span class="p">))</span>
+<span class="go">([1, 2], [&#39;bad: -1&#39;])</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/async_iterator.py</code></summary>
@@ -1277,7 +1248,7 @@ asyncio.run(map_partition([1, -1, 2], check, concurrency=2))
 <span class="sd">    One failure is a group of one: the exception type you catch never depends</span>
 <span class="sd">    on timing. Handle with ``except*``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; import asyncio</span>
 <span class="sd">        &gt;&gt;&gt; async def check(i: int) -&gt; Result[int, str]:</span>
 <span class="sd">        ...     return Ok(i) if i &gt; 0 else Err(f&quot;bad: {i}&quot;)</span>
@@ -1324,22 +1295,16 @@ One failure is a group of one: the exception type you catch never depends
 on timing. Handle with <code>except*</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>import asyncio
-async def fetch(i: int) -&gt; Result[int, str]:
-...     return Ok(i) if i &gt; 0 else Err(f"bad: {i}")
-asyncio.run(collect_all([fetch(1), fetch(2)]))
-Ok([1, 2])
-asyncio.run(collect_all([fetch(1), fetch(-1), fetch(-2)]))
-Err(['bad: -1', 'bad: -2'])</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">(</span><span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="k">if</span> <span class="n">i</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">Err</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;bad: </span><span class="si">{</span><span class="n">i</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">collect_all</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">)]))</span>
+<span class="go">Ok([1, 2])</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">collect_all</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="o">-</span><span class="mi">2</span><span class="p">)]))</span>
+<span class="go">Err([&#39;bad: -1&#39;, &#39;bad: -2&#39;])</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/async_iterator.py</code></summary>
@@ -1400,7 +1365,7 @@ Err(['bad: -1', 'bad: -2'])</p>
 <span class="sd">    One failure is a group of one: the exception type you catch never depends</span>
 <span class="sd">    on timing. Handle with ``except*``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; import asyncio</span>
 <span class="sd">        &gt;&gt;&gt; async def fetch(i: int) -&gt; Result[int, str]:</span>
 <span class="sd">        ...     return Ok(i) if i &gt; 0 else Err(f&quot;bad: {i}&quot;)</span>
@@ -1447,9 +1412,11 @@ every exception — including any raised while those tasks were being cancelled 
 propagates as a single <code>ExceptionGroup</code>, even when only one task failed.
 One failure is a group of one: the exception type you catch never depends
 on timing. Handle with <code>except*</code>.</p>
-<p>Example::</p>
-<div class="highlight"><pre><span></span><code>async for user in filter_ok_unordered([fetch(1), fetch(2), fetch(3)]):
-    print(user)
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="k">async</span> <span class="k">for</span> <span class="n">user</span> <span class="ow">in</span> <span class="n">filter_ok_unordered</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">3</span><span class="p">)]):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
 </code></pre></div>
 
 
@@ -1507,7 +1474,9 @@ on timing. Handle with <code>except*</code>.</p>
 <span class="normal">382</span>
 <span class="normal">383</span>
 <span class="normal">384</span>
-<span class="normal">385</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">filter_ok_unordered</span><span class="p">(</span>
+<span class="normal">385</span>
+<span class="normal">386</span>
+<span class="normal">387</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">filter_ok_unordered</span><span class="p">(</span>
     <span class="n">iterable</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">_CoroOrTask</span><span class="p">[</span><span class="n">Result</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">E</span><span class="p">]]],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">concurrency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1530,10 +1499,12 @@ on timing. Handle with <code>except*</code>.</p>
 <span class="sd">    One failure is a group of one: the exception type you catch never depends</span>
 <span class="sd">    on timing. Handle with ``except*``.</span>
 
-<span class="sd">    Example::</span>
-
+<span class="sd">    Examples:</span>
+<span class="sd">        ```python</span>
 <span class="sd">        async for user in filter_ok_unordered([fetch(1), fetch(2), fetch(3)]):</span>
 <span class="sd">            print(user)</span>
+<span class="sd">        ```</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">it</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span>
     <span class="n">pending</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Task</span><span class="p">[</span><span class="n">Result</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">E</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{</span>
@@ -1593,17 +1564,17 @@ every exception — including any raised while those tasks were being cancelled 
 propagates as a single <code>ExceptionGroup</code>, even when only one task failed.
 One failure is a group of one: the exception type you catch never depends
 on timing. Handle with <code>except*</code>.</p>
-<p>Example::</p>
-<div class="highlight"><pre><span></span><code>async for err in filter_err_unordered([fetch(1), fetch(2), fetch(3)]):
-    print(err)
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="k">async</span> <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="n">filter_err_unordered</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">3</span><span class="p">)]):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
 </code></pre></div>
 
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/async_iterator.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">388</span>
-<span class="normal">389</span>
-<span class="normal">390</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">390</span>
 <span class="normal">391</span>
 <span class="normal">392</span>
 <span class="normal">393</span>
@@ -1653,7 +1624,11 @@ on timing. Handle with <code>except*</code>.</p>
 <span class="normal">437</span>
 <span class="normal">438</span>
 <span class="normal">439</span>
-<span class="normal">440</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">filter_err_unordered</span><span class="p">(</span>
+<span class="normal">440</span>
+<span class="normal">441</span>
+<span class="normal">442</span>
+<span class="normal">443</span>
+<span class="normal">444</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">filter_err_unordered</span><span class="p">(</span>
     <span class="n">iterable</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">_CoroOrTask</span><span class="p">[</span><span class="n">Result</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">E</span><span class="p">]]],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">concurrency</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
@@ -1676,10 +1651,12 @@ on timing. Handle with <code>except*</code>.</p>
 <span class="sd">    One failure is a group of one: the exception type you catch never depends</span>
 <span class="sd">    on timing. Handle with ``except*``.</span>
 
-<span class="sd">    Example::</span>
-
+<span class="sd">    Examples:</span>
+<span class="sd">        ```python</span>
 <span class="sd">        async for err in filter_err_unordered([fetch(1), fetch(2), fetch(3)]):</span>
 <span class="sd">            print(err)</span>
+<span class="sd">        ```</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">it</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span>
     <span class="n">pending</span><span class="p">:</span> <span class="nb">set</span><span class="p">[</span><span class="n">asyncio</span><span class="o">.</span><span class="n">Task</span><span class="p">[</span><span class="n">Result</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">E</span><span class="p">]]]</span> <span class="o">=</span> <span class="p">{</span>
@@ -1741,19 +1718,17 @@ every exception — including any raised while those tasks were being cancelled 
 propagates as a single <code>ExceptionGroup</code>, even when only one task failed.
 One failure is a group of one: the exception type you catch never depends
 on timing. Handle with <code>except*</code>.</p>
-<p>Example::</p>
-<div class="highlight"><pre><span></span><code>async for user in filter_ok([fetch(1), fetch(2), fetch(3)], concurrency=4):
-    print(user)
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="k">async</span> <span class="k">for</span> <span class="n">user</span> <span class="ow">in</span> <span class="n">filter_ok</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">3</span><span class="p">)],</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">user</span><span class="p">)</span>
 </code></pre></div>
 
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/async_iterator.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">443</span>
-<span class="normal">444</span>
-<span class="normal">445</span>
-<span class="normal">446</span>
-<span class="normal">447</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">447</span>
 <span class="normal">448</span>
 <span class="normal">449</span>
 <span class="normal">450</span>
@@ -1807,7 +1782,13 @@ on timing. Handle with <code>except*</code>.</p>
 <span class="normal">498</span>
 <span class="normal">499</span>
 <span class="normal">500</span>
-<span class="normal">501</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">filter_ok</span><span class="p">(</span>
+<span class="normal">501</span>
+<span class="normal">502</span>
+<span class="normal">503</span>
+<span class="normal">504</span>
+<span class="normal">505</span>
+<span class="normal">506</span>
+<span class="normal">507</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">filter_ok</span><span class="p">(</span>
     <span class="n">iterable</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">_CoroOrTask</span><span class="p">[</span><span class="n">Result</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">E</span><span class="p">]]],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">concurrency</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1832,10 +1813,12 @@ on timing. Handle with <code>except*</code>.</p>
 <span class="sd">    One failure is a group of one: the exception type you catch never depends</span>
 <span class="sd">    on timing. Handle with ``except*``.</span>
 
-<span class="sd">    Example::</span>
-
+<span class="sd">    Examples:</span>
+<span class="sd">        ```python</span>
 <span class="sd">        async for user in filter_ok([fetch(1), fetch(2), fetch(3)], concurrency=4):</span>
 <span class="sd">            print(user)</span>
+<span class="sd">        ```</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">it</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span>
     <span class="n">pending</span><span class="p">,</span> <span class="n">next_idx</span> <span class="o">=</span> <span class="n">_make_pending_indexed</span><span class="p">(</span><span class="n">it</span><span class="p">,</span> <span class="n">concurrency</span><span class="p">)</span>
@@ -1901,21 +1884,17 @@ every exception — including any raised while those tasks were being cancelled 
 propagates as a single <code>ExceptionGroup</code>, even when only one task failed.
 One failure is a group of one: the exception type you catch never depends
 on timing. Handle with <code>except*</code>.</p>
-<p>Example::</p>
-<div class="highlight"><pre><span></span><code>async for err in filter_err([fetch(1), fetch(2), fetch(3)], concurrency=4):
-    print(err)
+
+
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="k">async</span> <span class="k">for</span> <span class="n">err</span> <span class="ow">in</span> <span class="n">filter_err</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">3</span><span class="p">)],</span> <span class="n">concurrency</span><span class="o">=</span><span class="mi">4</span><span class="p">):</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
 </code></pre></div>
 
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/async_iterator.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">504</span>
-<span class="normal">505</span>
-<span class="normal">506</span>
-<span class="normal">507</span>
-<span class="normal">508</span>
-<span class="normal">509</span>
-<span class="normal">510</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">510</span>
 <span class="normal">511</span>
 <span class="normal">512</span>
 <span class="normal">513</span>
@@ -1967,7 +1946,15 @@ on timing. Handle with <code>except*</code>.</p>
 <span class="normal">559</span>
 <span class="normal">560</span>
 <span class="normal">561</span>
-<span class="normal">562</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">filter_err</span><span class="p">(</span>
+<span class="normal">562</span>
+<span class="normal">563</span>
+<span class="normal">564</span>
+<span class="normal">565</span>
+<span class="normal">566</span>
+<span class="normal">567</span>
+<span class="normal">568</span>
+<span class="normal">569</span>
+<span class="normal">570</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">filter_err</span><span class="p">(</span>
     <span class="n">iterable</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">_CoroOrTask</span><span class="p">[</span><span class="n">Result</span><span class="p">[</span><span class="n">T</span><span class="p">,</span> <span class="n">E</span><span class="p">]]],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">concurrency</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
@@ -1992,10 +1979,12 @@ on timing. Handle with <code>except*</code>.</p>
 <span class="sd">    One failure is a group of one: the exception type you catch never depends</span>
 <span class="sd">    on timing. Handle with ``except*``.</span>
 
-<span class="sd">    Example::</span>
-
+<span class="sd">    Examples:</span>
+<span class="sd">        ```python</span>
 <span class="sd">        async for err in filter_err([fetch(1), fetch(2), fetch(3)], concurrency=4):</span>
 <span class="sd">            print(err)</span>
+<span class="sd">        ```</span>
+
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">it</span> <span class="o">=</span> <span class="nb">iter</span><span class="p">(</span><span class="n">iterable</span><span class="p">)</span>
     <span class="n">pending</span><span class="p">,</span> <span class="n">next_idx</span> <span class="o">=</span> <span class="n">_make_pending_indexed</span><span class="p">(</span><span class="n">it</span><span class="p">,</span> <span class="n">concurrency</span><span class="p">)</span>
@@ -2058,36 +2047,22 @@ only one coroutine can fail — so exceptions propagate bare, without an
 <code>ExceptionGroup</code>.</p>
 
 
-<details class="example" open>
-  <summary>Example</summary>
-  <blockquote>
-<blockquote>
-<blockquote>
-<p>import asyncio
-async def fetch(i: int) -&gt; int:
-...     return i
-def safe_add(acc: int, x: int) -&gt; Result[int, str]:
-...     return Err(f"negative: {x}") if x &lt; 0 else Ok(acc + x)
-asyncio.run(try_reduce([fetch(1), fetch(2)], 0, safe_add))
-Ok(3)
-asyncio.run(try_reduce([fetch(1), fetch(-1), fetch(3)], 0, safe_add))
-Err('negative: -1')</p>
-</blockquote>
-</blockquote>
-</blockquote>
-</details>
+<p><span class="doc-section-title">Examples:</span></p>
+    <div class="highlight"><pre><span></span><code><span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">fetch</span><span class="p">(</span><span class="n">i</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">i</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">safe_add</span><span class="p">(</span><span class="n">acc</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+<span class="gp">... </span>    <span class="k">return</span> <span class="n">Err</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;negative: </span><span class="si">{</span><span class="n">x</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">if</span> <span class="n">x</span> <span class="o">&lt;</span> <span class="mi">0</span> <span class="k">else</span> <span class="n">Ok</span><span class="p">(</span><span class="n">acc</span> <span class="o">+</span> <span class="n">x</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">try_reduce</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">2</span><span class="p">)],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">safe_add</span><span class="p">))</span>
+<span class="go">Ok(3)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">try_reduce</span><span class="p">([</span><span class="n">fetch</span><span class="p">(</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span> <span class="n">fetch</span><span class="p">(</span><span class="mi">3</span><span class="p">)],</span> <span class="mi">0</span><span class="p">,</span> <span class="n">safe_add</span><span class="p">))</span>
+<span class="go">Err(&#39;negative: -1&#39;)</span>
+</code></pre></div>
+
 
             <details class="mkdocstrings-source">
               <summary>Source code in <code>src/corrode/async_iterator.py</code></summary>
-              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">565</span>
-<span class="normal">566</span>
-<span class="normal">567</span>
-<span class="normal">568</span>
-<span class="normal">569</span>
-<span class="normal">570</span>
-<span class="normal">571</span>
-<span class="normal">572</span>
-<span class="normal">573</span>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal">573</span>
 <span class="normal">574</span>
 <span class="normal">575</span>
 <span class="normal">576</span>
@@ -2126,7 +2101,15 @@ Err('negative: -1')</p>
 <span class="normal">609</span>
 <span class="normal">610</span>
 <span class="normal">611</span>
-<span class="normal">612</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">try_reduce</span><span class="p">(</span>
+<span class="normal">612</span>
+<span class="normal">613</span>
+<span class="normal">614</span>
+<span class="normal">615</span>
+<span class="normal">616</span>
+<span class="normal">617</span>
+<span class="normal">618</span>
+<span class="normal">619</span>
+<span class="normal">620</span></pre></div></td><td class="code"><div><pre><span></span><code><span class="k">async</span> <span class="k">def</span><span class="w"> </span><span class="nf">try_reduce</span><span class="p">(</span>
     <span class="n">iterable</span><span class="p">:</span> <span class="n">Iterable</span><span class="p">[</span><span class="n">_CoroOrTask</span><span class="p">[</span><span class="n">T</span><span class="p">]],</span>
     <span class="n">initial</span><span class="p">:</span> <span class="n">U</span><span class="p">,</span>
     <span class="n">f</span><span class="p">:</span> <span class="n">Callable</span><span class="p">[[</span><span class="n">U</span><span class="p">,</span> <span class="n">T</span><span class="p">],</span> <span class="n">Result</span><span class="p">[</span><span class="n">U</span><span class="p">,</span> <span class="n">E</span><span class="p">]],</span>
@@ -2145,7 +2128,7 @@ Err('negative: -1')</p>
 <span class="sd">    only one coroutine can fail — so exceptions propagate bare, without an</span>
 <span class="sd">    ``ExceptionGroup``.</span>
 
-<span class="sd">    Example:</span>
+<span class="sd">    Examples:</span>
 <span class="sd">        &gt;&gt;&gt; import asyncio</span>
 <span class="sd">        &gt;&gt;&gt; async def fetch(i: int) -&gt; int:</span>
 <span class="sd">        ...     return i</span>
