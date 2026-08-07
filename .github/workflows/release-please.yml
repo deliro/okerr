@@ -14,17 +14,17 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
-      - uses: googleapis/release-please-action@v4
+      - uses: googleapis/release-please-action@v5
         id: release
         with:
           release-type: python
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         if: steps.release.outputs.pr
         with:
           ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
 
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v7
         if: steps.release.outputs.pr
 
       - name: Update uv.lock
