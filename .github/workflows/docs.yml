@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - main
+  release:
+    types: [published]
   workflow_dispatch:
 
 name: Docs
@@ -10,6 +12,7 @@ name: Docs
 permissions:
   contents: write
 
+# mike commits to the gh-pages branch, so two deploys at once would conflict.
 concurrency:
   group: docs-deploy
   cancel-in-progress: false
@@ -19,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
@@ -31,5 +36,35 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Build and deploy to GitHub Pages
-        run: uv run --locked --group docs mkdocs gh-deploy --force
+      # A published release is the documented version: it gets its own
+      # directory and takes over the `latest` alias, which is what the site
+      # opens by default.
+      #
+      # --alias-type=copy is required: mike's default symlink alias is not
+      # served by GitHub Pages, which would 404 every /latest/... deep link.
+      - name: Deploy release docs
+        if: github.event_name == 'release'
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="${TAG#v}"
+          uv run --locked --group docs mike deploy --push --update-aliases \
+            --alias-type=copy --allow-empty "$version" latest
+          uv run --locked --group docs mike set-default --push --allow-empty latest
+
+      # main documents unreleased code, published separately as `dev` so it can
+      # never be mistaken for the released API.
+      - name: Deploy dev docs
+        if: github.event_name != 'release'
+        run: |
+          uv run --locked --group docs mike deploy --push --allow-empty dev
+
+          # The site root is a redirect written by `set-default`. Point it at
+          # `latest` once a release exists, and at `dev` before the first one,
+          # so the root is never a 404.
+          if uv run --locked --group docs mike list latest >/dev/null 2>&1; then
+            default=latest
+          else
+            default=dev
+          fi
+          uv run --locked --group docs mike set-default --push --allow-empty "$default"

@@ -34,10 +34,17 @@ nav:
 
 markdown_extensions:
   - admonition
+  - md_in_html
   - pymdownx.highlight
   - pymdownx.superfences
   - pymdownx.snippets:
       check_paths: true
+      base_path: ["."]
+
+extra:
+  version:
+    provider: mike
+    alias: true
 
 plugins:
   - search

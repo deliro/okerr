@@ -2,7 +2,7 @@
 
 A Rust-like `Result` type for Python 3.11+, fully type annotated.
 
-<div align="center">
+<div align="center" markdown="1">
 
 > *Explicit is better than implicit.*
 > *Errors should never pass silently.*
@@ -18,7 +18,9 @@ A Rust-like `Result` type for Python 3.11+, fully type annotated.
 
 📚 **[Documentation](https://deliro.github.io/corrode/)** — the full API
 reference is generated from the source docstrings, so it always matches the
-code, and every example in it is executed as a doctest in CI.
+code, and every example in it is executed as a doctest in CI. The site is
+versioned: it opens on `latest` (the newest release), every past release stays
+available, and `dev` tracks unreleased `main`. Pick one in the header.
 
 ## Table of Contents
 
@@ -34,6 +36,8 @@ code, and every example in it is executed as a doctest in CI.
 - [Typing](#typing)
 - [Stability](#stability)
 - [License](#license)
+
+<!-- --8<-- [start:body] -->
 
 ## Installation
 
@@ -197,7 +201,7 @@ Use `is_ok()` / `is_err()`, pattern matching, or `is_ok_and()` instead.
 ## Tour
 
 A taste of the combinators. Every sync method has a doctested example in the
-[API reference](https://deliro.github.io/corrode/api/result/); the `_async`
+[API reference](https://deliro.github.io/corrode/latest/api/result/); the `_async`
 variants mirror their sync counterparts:
 
 ```python
@@ -261,7 +265,7 @@ def parse_port(key: str) -> int:
 assert parse_port("PORT") == Ok(8080)  # Result[int, KeyError | ValueError]
 ```
 
-Also available — see the [API reference](https://deliro.github.io/corrode/api/result/):
+Also available — see the [API reference](https://deliro.github.io/corrode/latest/api/result/):
 
 - transforms: `map_err`, `map_or`, `map_or_else`
 - predicates: `is_ok`, `is_err`, `is_ok_and`, `is_err_and`
@@ -276,7 +280,7 @@ Also available — see the [API reference](https://deliro.github.io/corrode/api/
 ## Iterator utilities
 
 `corrode.iterator` works with iterables of `Result` values
-([API reference](https://deliro.github.io/corrode/api/iterator/)):
+([API reference](https://deliro.github.io/corrode/latest/api/iterator/)):
 
 | Function        | Semantics                                                          |
 | --------------- | ------------------------------------------------------------------ |
@@ -315,7 +319,7 @@ assert partition([parse("1"), parse("x"), parse("2")]) == ([1, 2], ["not a numbe
 ## Async iterator utilities
 
 `corrode.async_iterator` runs coroutines or tasks concurrently
-([API reference](https://deliro.github.io/corrode/api/async-iterator/)):
+([API reference](https://deliro.github.io/corrode/latest/api/async-iterator/)):
 
 | Function                                   | Semantics                                                      |
 | ------------------------------------------ | -------------------------------------------------------------- |
@@ -491,6 +495,8 @@ always listed in the [changelog](https://github.com/deliro/corrode/blob/main/CHA
 Versioning follows [SemVer](https://semver.org); after 1.0 the public API —
 everything exported from `corrode`, `corrode.iterator`, and
 `corrode.async_iterator` — will only break with a major release.
+
+<!-- --8<-- [end:body] -->
 
 ## Acknowledgements
 
