@@ -69,7 +69,7 @@ jobs:
         run: uv run pytest ${{ matrix.python == '3.14' && '--cov=corrode --cov-report=xml' || '' }}
 
       - name: Upload coverage to codecov.io
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v7
         if: matrix.python == '3.14'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
