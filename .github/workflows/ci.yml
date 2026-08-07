@@ -68,11 +68,16 @@ jobs:
       - name: Run tests
         run: uv run pytest ${{ matrix.python == '3.14' && '--cov=corrode --cov-report=xml' || '' }}
 
+      # fail_ci_if_error defaults to false, which let a rejected upload
+      # ("Token required - not valid tokenless upload") pass as a green build
+      # while the coverage badge sat at "unknown". A broken upload is a broken
+      # build: errors should never pass silently.
       - name: Upload coverage to codecov.io
         uses: codecov/codecov-action@v7
         if: matrix.python == '3.14'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: true
 
   typecheck:
     runs-on: ubuntu-latest
