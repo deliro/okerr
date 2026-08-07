@@ -12,6 +12,7 @@ A Rust-like `Result` type for Python 3.11+, fully type annotated.
 [![CI](https://github.com/deliro/corrode/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/deliro/corrode/actions/workflows/ci.yml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/deliro/corrode/branch/main/graph/badge.svg)](https://codecov.io/gh/deliro/corrode)
 [![PyPI](https://img.shields.io/pypi/v/corrode)](https://pypi.org/project/corrode/)
+[![Downloads](https://img.shields.io/pypi/dm/corrode)](https://pypistats.org/packages/corrode)
 [![Python versions](https://img.shields.io/pypi/pyversions/corrode)](https://pypi.org/project/corrode/)
 
 </div>
