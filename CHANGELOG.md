@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1](https://github.com/deliro/corrode/compare/v1.0.0...v1.0.1) (2026-08-07)
+
+
+### Bug Fixes
+
+* **ci:** chain publish and release docs from release-please ([#23](https://github.com/deliro/corrode/issues/23)) ([47b480d](https://github.com/deliro/corrode/commit/47b480d25cc92c9b42aec1c77a9eccb5304961b0))
+
+
+### Documentation
+
+* add a downloads/month badge ([#27](https://github.com/deliro/corrode/issues/27)) ([8b15b6f](https://github.com/deliro/corrode/commit/8b15b6f250efeef670e5c8b82b5ca71737b197af))
+* restructure README into a top-down narrative and add a design FAQ ([b5062c3](https://github.com/deliro/corrode/commit/b5062c3b4893d65d2c2c13f301c285eff28853af))
+
 ## [1.0.0](https://github.com/deliro/corrode/compare/v0.1.2...v1.0.0) (2026-08-07)
 
 
