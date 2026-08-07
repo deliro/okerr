@@ -1,11 +1,23 @@
 ---
+# The release path is invoked by release-please.yml, not by `on: release`:
+# release-please creates the release with GITHUB_TOKEN, and GitHub does not
+# start workflows from events raised by that token.
 on:
   push:
     branches:
       - main
-  release:
-    types: [published]
+  workflow_call:
+    inputs:
+      version:
+        description: Release tag to publish and alias as `latest`
+        required: true
+        type: string
   workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag to publish as `latest` (empty deploys `dev`)
+        required: false
+        type: string
 
 name: Docs
 
@@ -43,9 +55,9 @@ jobs:
       # --alias-type=copy is required: mike's default symlink alias is not
       # served by GitHub Pages, which would 404 every /latest/... deep link.
       - name: Deploy release docs
-        if: github.event_name == 'release'
+        if: inputs.version != ''
         env:
-          TAG: ${{ github.event.release.tag_name }}
+          TAG: ${{ inputs.version }}
         run: |
           version="${TAG#v}"
           uv run --locked --group docs mike deploy --push --update-aliases \
@@ -55,7 +67,7 @@ jobs:
       # main documents unreleased code, published separately as `dev` so it can
       # never be mistaken for the released API.
       - name: Deploy dev docs
-        if: github.event_name != 'release'
+        if: inputs.version == ''
         run: |
           uv run --locked --group docs mike deploy --push --allow-empty dev
 

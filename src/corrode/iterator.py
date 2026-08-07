@@ -19,7 +19,7 @@ def collect(iterable: Iterable[Result[T, E]]) -> Result[list[T], E]:
 
     Returns the first ``Err`` encountered, short-circuiting the iteration.
 
-    Example:
+    Examples:
         >>> collect([Ok(1), Ok(2), Ok(3)])
         Ok([1, 2, 3])
         >>> collect([Ok(1), Err("bad"), Ok(3)])
@@ -47,7 +47,7 @@ def collect_all(iterable: Iterable[Result[T, E]]) -> Result[list[T], list[E]]:
     the outcome is a ``Result``: "all succeeded" and "something failed" are
     distinct variants instead of an empty-list check.
 
-    Example:
+    Examples:
         >>> collect_all([Ok(1), Ok(2), Ok(3)])
         Ok([1, 2, 3])
         >>> collect_all([Ok(1), Err("a"), Ok(3), Err("b")])
@@ -69,7 +69,7 @@ def map_collect(
 
     Returns the first ``Err`` produced by *f*, short-circuiting the iteration.
 
-    Example:
+    Examples:
         >>> def parse(s: str) -> Result[int, str]:
         ...     return Ok(int(s)) if s.isdigit() else Err(f"not a number: {s!r}")
         >>> map_collect(["1", "2", "3"], parse)
@@ -96,7 +96,7 @@ def partition(
 
     Consumes all elements without short-circuiting.
 
-    Example:
+    Examples:
         >>> partition([Ok(1), Err("a"), Ok(2), Err("b")])
         ([1, 2], ['a', 'b'])
 
@@ -121,7 +121,7 @@ def map_partition(
 
     Consumes all elements without short-circuiting.
 
-    Example:
+    Examples:
         >>> def parse(s: str) -> Result[int, str]:
         ...     return Ok(int(s)) if s.isdigit() else Err(f"not a number: {s!r}")
         >>> map_partition(["1", "x", "3"], parse)
@@ -135,7 +135,7 @@ def filter_ok(iterable: Iterable[Result[T, E]]) -> Iterator[T]:
     """
     Yield the value from each ``Ok``, skipping ``Err`` values.
 
-    Example:
+    Examples:
         >>> list(filter_ok([Ok(1), Err("x"), Ok(2)]))
         [1, 2]
 
@@ -150,7 +150,7 @@ def filter_err(iterable: Iterable[Result[T, E]]) -> Iterator[E]:
     """
     Yield the error from each ``Err``, skipping ``Ok`` values.
 
-    Example:
+    Examples:
         >>> list(filter_err([Ok(1), Err("x"), Ok(2), Err("y")]))
         ['x', 'y']
 
@@ -169,7 +169,7 @@ def try_reduce(
     """
     Fold *iterable* with *f*, short-circuiting on ``Err``.
 
-    Example:
+    Examples:
         >>> def safe_add(acc: int, x: int) -> Result[int, str]:
         ...     return Err(f"negative value: {x}") if x < 0 else Ok(acc + x)
         >>> try_reduce([1, 2, 3], 0, safe_add)

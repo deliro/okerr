@@ -1,7 +1,13 @@
 ---
+# Invoked by release-please.yml once a release is actually created.
+#
+# Deliberately NOT `on: release: published`: release-please creates the release
+# with GITHUB_TOKEN, and GitHub does not start workflows from events raised by
+# that token, so a release trigger would silently never fire. Every successful
+# publish in this repo's history was a manual workflow_dispatch for that reason.
 on:
-  release:
-    types: [published]
+  workflow_call:
+  workflow_dispatch:
 
 name: Publish to PyPI
 

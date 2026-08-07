@@ -106,7 +106,7 @@ async def collect(
     One failure is a group of one: the exception type you catch never depends
     on timing. Handle with ``except*``.
 
-    Example:
+    Examples:
         >>> import asyncio
         >>> async def fetch(i: int) -> Result[int, str]:
         ...     return Ok(i) if i > 0 else Err("bad")
@@ -183,7 +183,7 @@ async def map_collect(
     One failure is a group of one: the exception type you catch never depends
     on timing. Handle with ``except*``.
 
-    Example:
+    Examples:
         >>> import asyncio
         >>> async def double(x: int) -> Result[int, str]:
         ...     return Ok(x * 2)
@@ -217,7 +217,7 @@ async def partition(
     One failure is a group of one: the exception type you catch never depends
     on timing. Handle with ``except*``.
 
-    Example:
+    Examples:
         >>> import asyncio
         >>> async def fetch(i: int) -> Result[int, str]:
         ...     return Ok(i) if i > 0 else Err(f"bad: {i}")
@@ -278,7 +278,7 @@ async def map_partition(
     One failure is a group of one: the exception type you catch never depends
     on timing. Handle with ``except*``.
 
-    Example:
+    Examples:
         >>> import asyncio
         >>> async def check(i: int) -> Result[int, str]:
         ...     return Ok(i) if i > 0 else Err(f"bad: {i}")
@@ -314,7 +314,7 @@ async def collect_all(
     One failure is a group of one: the exception type you catch never depends
     on timing. Handle with ``except*``.
 
-    Example:
+    Examples:
         >>> import asyncio
         >>> async def fetch(i: int) -> Result[int, str]:
         ...     return Ok(i) if i > 0 else Err(f"bad: {i}")
@@ -353,10 +353,12 @@ async def filter_ok_unordered(
     One failure is a group of one: the exception type you catch never depends
     on timing. Handle with ``except*``.
 
-    Example::
-
+    Examples:
+        ```python
         async for user in filter_ok_unordered([fetch(1), fetch(2), fetch(3)]):
             print(user)
+        ```
+
     """
     it = iter(iterable)
     pending: set[asyncio.Task[Result[T, E]]] = {
@@ -408,10 +410,12 @@ async def filter_err_unordered(
     One failure is a group of one: the exception type you catch never depends
     on timing. Handle with ``except*``.
 
-    Example::
-
+    Examples:
+        ```python
         async for err in filter_err_unordered([fetch(1), fetch(2), fetch(3)]):
             print(err)
+        ```
+
     """
     it = iter(iterable)
     pending: set[asyncio.Task[Result[T, E]]] = {
@@ -465,10 +469,12 @@ async def filter_ok(
     One failure is a group of one: the exception type you catch never depends
     on timing. Handle with ``except*``.
 
-    Example::
-
+    Examples:
+        ```python
         async for user in filter_ok([fetch(1), fetch(2), fetch(3)], concurrency=4):
             print(user)
+        ```
+
     """
     it = iter(iterable)
     pending, next_idx = _make_pending_indexed(it, concurrency)
@@ -526,10 +532,12 @@ async def filter_err(
     One failure is a group of one: the exception type you catch never depends
     on timing. Handle with ``except*``.
 
-    Example::
-
+    Examples:
+        ```python
         async for err in filter_err([fetch(1), fetch(2), fetch(3)], concurrency=4):
             print(err)
+        ```
+
     """
     it = iter(iterable)
     pending, next_idx = _make_pending_indexed(it, concurrency)
@@ -581,7 +589,7 @@ async def try_reduce(
     only one coroutine can fail — so exceptions propagate bare, without an
     ``ExceptionGroup``.
 
-    Example:
+    Examples:
         >>> import asyncio
         >>> async def fetch(i: int) -> int:
         ...     return i
