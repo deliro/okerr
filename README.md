@@ -34,7 +34,6 @@ available, and `dev` tracks unreleased `main`. Pick one in the header.
   - [Exceptions and `ExceptionGroup`](#exceptions-and-exceptiongroup)
 - [Adopting corrode in an existing codebase](#adopting-corrode-in-an-existing-codebase)
 - [Typing](#typing)
-- [Stability](#stability)
 - [License](#license)
 
 <!-- --8<-- [start:body] -->
@@ -487,14 +486,6 @@ type information works out of the box, no stubs needed. Every release is
 verified against **four** type checkers in strict mode: mypy, basedpyright,
 ty, and pyrefly. All README examples are executed *and* type-checked in CI;
 all docstring examples run as doctests.
-
-## Stability
-
-`corrode` is pre-1.0: breaking changes may occur in minor releases and are
-always listed in the [changelog](https://github.com/deliro/corrode/blob/main/CHANGELOG.md).
-Versioning follows [SemVer](https://semver.org); after 1.0 the public API —
-everything exported from `corrode`, `corrode.iterator`, and
-`corrode.async_iterator` — will only break with a major release.
 
 <!-- --8<-- [end:body] -->
 
