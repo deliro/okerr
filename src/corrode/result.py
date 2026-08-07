@@ -86,7 +86,7 @@ class Ok(Generic[T_co]):
         """
         Return ``True`` because this is an ``Ok`` value.
 
-        Example:
+        Examples:
             >>> Ok(2).is_ok()
             True
 
@@ -97,7 +97,7 @@ class Ok(Generic[T_co]):
         """
         Return ``False`` because this is an ``Ok`` value.
 
-        Example:
+        Examples:
             >>> Ok(2).is_err()
             False
 
@@ -108,7 +108,7 @@ class Ok(Generic[T_co]):
         """
         Return ``True`` if the result is ``Ok`` and the predicate *f* returns ``True``.
 
-        Example:
+        Examples:
             >>> Ok(2).is_ok_and(lambda x: x > 1)
             True
             >>> Ok(0).is_ok_and(lambda x: x > 1)
@@ -127,7 +127,7 @@ class Ok(Generic[T_co]):
 
         Since this is ``Ok``, always returns ``False``.
 
-        Example:
+        Examples:
             >>> Ok(2).is_err_and(lambda e: True)
             False
 
@@ -148,7 +148,7 @@ class Ok(Generic[T_co]):
 
         Return the contained ``Ok`` value, discarding the error, if any.
 
-        Example:
+        Examples:
             >>> Ok(2).ok()
             2
 
@@ -161,7 +161,7 @@ class Ok(Generic[T_co]):
 
         Return ``None``, discarding the success value.
 
-        Example:
+        Examples:
             >>> Ok(2).err() is None
             True
 
@@ -173,7 +173,7 @@ class Ok(Generic[T_co]):
         """
         The contained ``Ok`` value.
 
-        Example:
+        Examples:
             >>> Ok(2).ok_value
             2
 
@@ -189,7 +189,7 @@ class Ok(Generic[T_co]):
         Raises:
             UnwrapError: Never raised for ``Ok``.
 
-        Example:
+        Examples:
             >>> Ok(2).expect("must exist")
             2
 
@@ -204,7 +204,7 @@ class Ok(Generic[T_co]):
             UnwrapError: Always, because this is an ``Ok`` value, with a
                 message including the passed *message* and the ``Ok`` content.
 
-        Example:
+        Examples:
             >>> Ok(2).expect_err("wanted an error")
             Traceback (most recent call last):
                 ...
@@ -222,7 +222,7 @@ class Ok(Generic[T_co]):
         Raises:
             UnwrapError: Never raised for ``Ok``.
 
-        Example:
+        Examples:
             >>> Ok(2).unwrap()
             2
 
@@ -236,7 +236,7 @@ class Ok(Generic[T_co]):
         Raises:
             UnwrapError: Always, because this is an ``Ok`` value.
 
-        Example:
+        Examples:
             >>> Ok(2).unwrap_err()
             Traceback (most recent call last):
                 ...
@@ -251,7 +251,7 @@ class Ok(Generic[T_co]):
 
         The default value is ignored because this is an ``Ok``.
 
-        Example:
+        Examples:
             >>> Ok(2).unwrap_or(0)
             2
 
@@ -264,7 +264,7 @@ class Ok(Generic[T_co]):
 
         The callable is never invoked because this is an ``Ok``.
 
-        Example:
+        Examples:
             >>> Ok(2).unwrap_or_else(len)
             2
 
@@ -285,7 +285,7 @@ class Ok(Generic[T_co]):
 
         The exception is never raised because this is an ``Ok``.
 
-        Example:
+        Examples:
             >>> Ok(2).unwrap_or_raise(ValueError)
             2
 
@@ -298,7 +298,7 @@ class Ok(Generic[T_co]):
 
         Map a ``Result[T, E]`` to ``Result[U, E]``, leaving an ``Err`` value untouched.
 
-        Example:
+        Examples:
             >>> Ok(2).map(lambda x: x * 10)
             Ok(20)
 
@@ -319,7 +319,7 @@ class Ok(Generic[T_co]):
 
         Since this is ``Ok``, *default* is ignored.
 
-        Example:
+        Examples:
             >>> Ok(2).map_or(0, lambda x: x * 10)
             20
 
@@ -340,7 +340,7 @@ class Ok(Generic[T_co]):
 
         Map a ``Result[T, E]`` to ``U``.
 
-        Example:
+        Examples:
             >>> Ok(2).map_or_else(lambda e: 0, lambda x: x * 10)
             20
 
@@ -365,7 +365,7 @@ class Ok(Generic[T_co]):
 
         Map a ``Result[T, E]`` to ``Result[T, F]``.
 
-        Example:
+        Examples:
             >>> Ok(2).map_err(str.upper)
             Ok(2)
 
@@ -386,7 +386,7 @@ class Ok(Generic[T_co]):
 
         This function can be used for control flow based on ``Result`` values.
 
-        Example:
+        Examples:
             >>> def halve(x: int) -> Result[int, str]:
             ...     return Ok(x // 2) if x % 2 == 0 else Err("odd")
             >>> Ok(4).and_then(halve)
@@ -414,7 +414,7 @@ class Ok(Generic[T_co]):
 
         Since this is ``Ok``, *op* is never called.
 
-        Example:
+        Examples:
             >>> Ok(2).or_else(lambda e: Ok(0))
             Ok(2)
 
@@ -435,7 +435,7 @@ class Ok(Generic[T_co]):
 
         Return the original result unchanged.
 
-        Example:
+        Examples:
             >>> Ok(2).inspect(print)
             2
             Ok(2)
@@ -463,7 +463,7 @@ class Ok(Generic[T_co]):
 
         Return the original result unchanged. Since this is ``Ok``, *op* is not called.
 
-        Example:
+        Examples:
             >>> Ok(2).inspect_err(print)
             Ok(2)
 
@@ -515,7 +515,7 @@ class Ok(Generic[T_co]):
         Returns ``Ok`` of a tuple of all values if all results are ``Ok``.
         Returns the first ``Err`` encountered otherwise.
 
-        Example:
+        Examples:
             >>> Ok(1).zip(Ok("a"))
             Ok((1, 'a'))
             >>> Ok(1).zip(Ok("a"), Ok(3.0))
@@ -540,7 +540,7 @@ class Ok(Generic[T_co]):
         Convert ``Result[Result[U, F], E]`` into ``Result[U, F]``.
         Only one level is removed — ``Ok(Ok(Ok(1))).flatten()`` is ``Ok(Ok(1))``.
 
-        Example:
+        Examples:
             >>> Ok(Ok(1)).flatten()
             Ok(1)
             >>> Ok(Err("bad")).flatten()
@@ -624,7 +624,7 @@ class Err(Generic[E_co]):
         """
         Return ``False`` because this is an ``Err`` value.
 
-        Example:
+        Examples:
             >>> Err("boom").is_ok()
             False
 
@@ -635,7 +635,7 @@ class Err(Generic[E_co]):
         """
         Return ``True`` because this is an ``Err`` value.
 
-        Example:
+        Examples:
             >>> Err("boom").is_err()
             True
 
@@ -648,7 +648,7 @@ class Err(Generic[E_co]):
 
         Since this is ``Err``, always returns ``False``.
 
-        Example:
+        Examples:
             >>> Err("boom").is_ok_and(lambda x: True)
             False
 
@@ -667,7 +667,7 @@ class Err(Generic[E_co]):
         """
         Return ``True`` if the result is ``Err`` and the predicate *f* returns ``True``.
 
-        Example:
+        Examples:
             >>> Err("boom").is_err_and(lambda e: "boo" in e)
             True
             >>> Err("boom").is_err_and(lambda e: e == "x")
@@ -686,7 +686,7 @@ class Err(Generic[E_co]):
 
         Return ``None``, discarding the error value.
 
-        Example:
+        Examples:
             >>> Err("boom").ok() is None
             True
 
@@ -699,7 +699,7 @@ class Err(Generic[E_co]):
 
         Return the contained ``Err`` value, discarding the success value, if any.
 
-        Example:
+        Examples:
             >>> Err("boom").err()
             'boom'
 
@@ -711,7 +711,7 @@ class Err(Generic[E_co]):
         """
         The contained ``Err`` value.
 
-        Example:
+        Examples:
             >>> Err("boom").err_value
             'boom'
 
@@ -726,7 +726,7 @@ class Err(Generic[E_co]):
             UnwrapError: Always, because this is an ``Err`` value, with a
                 message including the passed *message* and the ``Err`` content.
 
-        Example:
+        Examples:
             >>> Err("boom").expect("must exist")
             Traceback (most recent call last):
                 ...
@@ -750,7 +750,7 @@ class Err(Generic[E_co]):
         Raises:
             UnwrapError: Never raised for ``Err``.
 
-        Example:
+        Examples:
             >>> Err("boom").expect_err("wanted an error")
             'boom'
 
@@ -765,7 +765,7 @@ class Err(Generic[E_co]):
             UnwrapError: Always, because this is an ``Err`` value, with a
                 message provided by the ``Err`` content.
 
-        Example:
+        Examples:
             >>> Err("boom").unwrap()
             Traceback (most recent call last):
                 ...
@@ -789,7 +789,7 @@ class Err(Generic[E_co]):
         Raises:
             UnwrapError: Never raised for ``Err``.
 
-        Example:
+        Examples:
             >>> Err("boom").unwrap_err()
             'boom'
 
@@ -802,7 +802,7 @@ class Err(Generic[E_co]):
 
         The contained ``Err`` value is discarded.
 
-        Example:
+        Examples:
             >>> Err("boom").unwrap_or(0)
             0
 
@@ -815,7 +815,7 @@ class Err(Generic[E_co]):
 
         The callable *op* is applied to the contained ``Err`` value.
 
-        Example:
+        Examples:
             >>> Err("boom").unwrap_or_else(len)
             4
 
@@ -836,7 +836,7 @@ class Err(Generic[E_co]):
 
         The exception *e* is instantiated with the ``Err`` value and raised.
 
-        Example:
+        Examples:
             >>> Err("boom").unwrap_or_raise(ValueError)
             Traceback (most recent call last):
                 ...
@@ -851,7 +851,7 @@ class Err(Generic[E_co]):
 
         Map a ``Result[T, E]`` to ``Result[U, E]``, leaving an ``Err`` value untouched.
 
-        Example:
+        Examples:
             >>> Err("boom").map(lambda x: x * 10)
             Err('boom')
 
@@ -872,7 +872,7 @@ class Err(Generic[E_co]):
 
         Since this is ``Err``, *op* is ignored and *default* is returned.
 
-        Example:
+        Examples:
             >>> Err("boom").map_or(0, lambda x: x * 10)
             0
 
@@ -893,7 +893,7 @@ class Err(Generic[E_co]):
 
         Map a ``Result[T, E]`` to ``U``.
 
-        Example:
+        Examples:
             >>> Err("boom").map_or_else(len, lambda x: x * 10)
             4
 
@@ -918,7 +918,7 @@ class Err(Generic[E_co]):
 
         Map a ``Result[T, E]`` to ``Result[T, F]``.
 
-        Example:
+        Examples:
             >>> Err("boom").map_err(str.upper)
             Err('BOOM')
 
@@ -939,7 +939,7 @@ class Err(Generic[E_co]):
 
         This function can be used for control flow based on ``Result`` values.
 
-        Example:
+        Examples:
             >>> Err("boom").and_then(lambda x: Ok(x * 10))
             Err('boom')
 
@@ -960,7 +960,7 @@ class Err(Generic[E_co]):
 
         Since this is ``Err``, *op* is called with the error value.
 
-        Example:
+        Examples:
             >>> Err("boom").or_else(lambda e: Ok(len(e)))
             Ok(4)
 
@@ -984,7 +984,7 @@ class Err(Generic[E_co]):
 
         Return the original result unchanged. Since this is ``Err``, *op* is not called.
 
-        Example:
+        Examples:
             >>> Err("boom").inspect(print)
             Err('boom')
 
@@ -1005,7 +1005,7 @@ class Err(Generic[E_co]):
 
         Return the original result unchanged.
 
-        Example:
+        Examples:
             >>> Err("boom").inspect_err(print)
             boom
             Err('boom')
@@ -1033,7 +1033,7 @@ class Err(Generic[E_co]):
 
         Since this is an ``Err``, always returns ``self`` without inspecting the others.
 
-        Example:
+        Examples:
             >>> Err("bad").zip(Ok(1))
             Err('bad')
             >>> Err("bad").zip(Ok(1), Ok(2))
@@ -1048,7 +1048,7 @@ class Err(Generic[E_co]):
 
         Since this is an ``Err``, there is nothing to flatten — ``self`` is returned.
 
-        Example:
+        Examples:
             >>> Err("bad").flatten()
             Err('bad')
 
@@ -1100,7 +1100,7 @@ def as_result(
     (``KeyboardInterrupt``, ``SystemExit``, ``asyncio.CancelledError``) must
     propagate — swallowing them breaks interrupts and task cancellation.
 
-    Example:
+    Examples:
         >>> @as_result(ValueError)
         ... def parse(s: str) -> int:
         ...     return int(s)
@@ -1180,7 +1180,7 @@ def from_optional(value: U | None, error: F) -> Result[U, F]:
     ``Result``. Note that ``Ok(None)`` cannot be produced — if ``None`` is a
     valid success value for you, construct the ``Result`` explicitly.
 
-    Example:
+    Examples:
         >>> from_optional(42, "missing")
         Ok(42)
         >>> from_optional(None, "missing")
@@ -1199,7 +1199,7 @@ def from_optional_or_else(value: U | None, error_fn: Callable[[], F]) -> Result[
     Like ``from_optional``, but *error_fn* is only called when *value* is
     ``None`` — use it when constructing the error is expensive.
 
-    Example:
+    Examples:
         >>> from_optional_or_else(42, lambda: "missing")
         Ok(42)
         >>> from_optional_or_else(None, lambda: "missing")
@@ -1223,7 +1223,7 @@ def is_ok(result: Result[T_co, E_co]) -> TypeIs[Ok[T_co]]:
         elif is_err(r):
             r  # r is of type Err[str]
 
-    Example:
+    Examples:
         >>> is_ok(Ok(1))
         True
         >>> is_ok(Err("boom"))
@@ -1245,7 +1245,7 @@ def is_err(result: Result[T_co, E_co]) -> TypeIs[Err[E_co]]:
         elif is_err(r):
             r  # r is of type Err[str]
 
-    Example:
+    Examples:
         >>> is_err(Err("boom"))
         True
         >>> is_err(Ok(1))
