@@ -60,10 +60,12 @@ Bugs hide until production, and `except Exception` becomes the norm:
 ```python
 from dataclasses import dataclass
 
+
 @dataclass
 class User:
     id: int
     name: str
+
 
 # Can this raise? What exceptions? The signature doesn't tell you.
 def get_user(user_id: int) -> User:
@@ -72,6 +74,7 @@ def get_user(user_id: int) -> User:
     if user_id == 13:
         raise PermissionError("Access denied")
     return User(id=user_id, name="Alice")
+
 
 # The caller has no idea this can fail — until it does in production
 user = get_user(1)
@@ -84,20 +87,25 @@ assert user.name == "Alice"
 from dataclasses import dataclass
 from corrode import Result, Ok, Err
 
+
 @dataclass
 class User:
     id: int
     name: str
 
+
 @dataclass
 class NotFound:
     user_id: int
+
 
 @dataclass
 class Forbidden:
     reason: str
 
+
 type GetUserError = NotFound | Forbidden
+
 
 # Errors are now part of the return type — callers see exactly what can go wrong
 def get_user(user_id: int) -> Result[User, GetUserError]:
@@ -107,6 +115,7 @@ def get_user(user_id: int) -> Result[User, GetUserError]:
     if user_id == 13:
         return Err(Forbidden(reason="banned"))
     return Ok(User(id=user_id, name="Alice"))
+
 
 # Can't ignore errors — Result forces you to handle both variants
 assert get_user(1) == Ok(User(id=1, name="Alice"))
@@ -126,13 +135,16 @@ class User:
     id: int
     name: str
 
+
 @dataclass
 class NotFound:
     user_id: int
 
+
 @dataclass
 class Forbidden:
     reason: str
+
 
 type GetUserError = NotFound | Forbidden
 
@@ -169,7 +181,9 @@ match get_user(42):
   construction (`AttributeError`). Instances are safe to share and to use as
   dict keys or set members (hashable when the contained value is hashable).
 - **No truth value.** `if result:` is the classic silent bug — any `Result`
-  would be truthy, so a failure passes the check. `corrode` makes it loud:
+  would be truthy, so a failure passes the check. `corrode` makes it loud at
+  runtime, and because `__bool__` is typed as `NoReturn`, a type checker
+  reports the body of `if result:` as unreachable before you ever run it:
 
 ```python
 from corrode import Result, Ok, Err
@@ -177,8 +191,7 @@ from corrode import Result, Ok, Err
 result: Result[int, str] = Err("hidden failure")
 
 try:
-    if result:  # bug: this is NOT "is it Ok?"
-        pass
+    bool(result)  # this is what `if result:` does under the hood
 except TypeError as e:
     print(e)  # Ok and Err have no truth value; use is_ok()/is_err(), ...
 ```
@@ -455,6 +468,7 @@ assert parse_port_wrapped("PORT") == Ok(8080)
 @dataclass
 class MissingKey:
     key: str
+
 
 @dataclass
 class InvalidValue:

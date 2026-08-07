@@ -72,6 +72,7 @@ docstring-code-format = true
 select = ["ALL"]
 ignore = [
     "COM812", # trailing comma — conflicts with the formatter, which owns this
+    "CPY001", # per-file copyright headers — the MIT LICENSE covers the project
     "D105",   # missing docstring in magic methods (__repr__, etc.)
     "D107",   # missing docstring in __init__
     "D203",   # `incorrect-blank-line-before-class` — conflicts with the formatter
