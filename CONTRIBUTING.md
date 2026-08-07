@@ -24,6 +24,32 @@ All four type checkers must pass with zero errors. Every code block in
 `README.md` is executed and type-checked by `tests/test_readme_blocks.py` —
 if you change the README, its examples must actually run.
 
+## Documentation
+
+The site is built with MkDocs and published to GitHub Pages by CI — never by
+hand. The API reference is generated from the source docstrings by
+mkdocstrings, and `docs/index.md` includes a marked region of `README.md`, so
+there is no second copy of anything to keep in sync.
+
+Versions are managed by [mike](https://github.com/jimporter/mike) and each one
+lives in its own directory on the `gh-pages` branch:
+
+| Version   | Source                | Deployed when                     |
+| --------- | --------------------- | --------------------------------- |
+| `latest`  | the newest release    | a GitHub Release is published     |
+| `<x.y.z>` | that release, pinned  | a GitHub Release is published     |
+| `dev`     | the `main` branch     | every push to `main`              |
+
+`latest` is what the site opens by default; `dev` documents unreleased code.
+Deep links in the README point at `/latest/...` on purpose — they must keep
+working for people running the released version.
+
+```sh
+just docs           # live preview of your working tree
+just docs-build     # strict build, same as CI
+just docs-versions  # preview the published multi-version site
+```
+
 ## Commit messages
 
 Releases are automated with [release-please](https://github.com/googleapis/release-please),

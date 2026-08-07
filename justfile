@@ -39,8 +39,13 @@ test-cov:
 build:
     uv build
 
+# live preview of the current working tree (single version)
 docs:
     uv run --group docs mkdocs serve
 
 docs-build:
     uv run --group docs mkdocs build --strict
+
+# preview the published multi-version site from the local gh-pages branch
+docs-versions:
+    uv run --group docs mike serve

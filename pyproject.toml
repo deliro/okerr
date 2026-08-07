@@ -47,6 +47,7 @@ dev = [
     "ruff>=0.8",
 ]
 docs = [
+    "mike>=2.1",
     "mkdocs-material>=9.5",
     "mkdocstrings[python]>=0.26",
 ]
