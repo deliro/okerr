@@ -359,10 +359,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#guarantees" class="md-nav__link">
+  <a href="#tour" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Guarantees
+        Tour
       
     </span>
   </a>
@@ -370,10 +370,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#tour" class="md-nav__link">
+  <a href="#strict-by-design" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Tour
+        Strict by design
       
     </span>
   </a>
@@ -438,6 +438,67 @@
       
     </span>
   </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#but-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        But... why?
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="But... why?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#doesnt-this-give-me-two-error-channels-instead-of-one" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Doesn't this give me two error channels instead of one?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#where-is-the-operator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Where is the ? operator?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#isnt-match-on-every-fallible-call-verbose" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Isn't match on every fallible call verbose?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#when-should-i-not-use-corrode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        When should I not use corrode?
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -676,11 +737,11 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
     <span class="k">return</span> <span class="n">User</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">)</span>
 
 
-<span class="c1"># The caller has no idea this can fail — until it does in production</span>
+<span class="c1"># The caller has no idea this can fail</span>
 <span class="n">user</span> <span class="o">=</span> <span class="n">get_user</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 <span class="k">assert</span> <span class="n">user</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Alice&quot;</span>
 </code></pre></div>
-<p><code>Result[T, E]</code> is a union of <code>Ok[T] | Err[E]</code>:</p>
+<p>The same function with <code>Result[T, E]</code> — a union of <code>Ok[T] | Err[E]</code>:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">corrode</span><span class="w"> </span><span class="kn">import</span> <span class="n">Result</span><span class="p">,</span> <span class="n">Ok</span><span class="p">,</span> <span class="n">Err</span>
 
@@ -706,7 +767,6 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
 
 <span class="c1"># Errors are now part of the return type — callers see exactly what can go wrong</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="n">User</span><span class="p">,</span> <span class="n">GetUserError</span><span class="p">]:</span>
-    <span class="c1"># Instead of raise, return Err — the type checker tracks it</span>
     <span class="k">if</span> <span class="n">user_id</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Err</span><span class="p">(</span><span class="n">NotFound</span><span class="p">(</span><span class="n">user_id</span><span class="o">=</span><span class="n">user_id</span><span class="p">))</span>
     <span class="k">if</span> <span class="n">user_id</span> <span class="o">==</span> <span class="mi">13</span><span class="p">:</span>
@@ -714,11 +774,14 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
     <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">User</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">))</span>
 
 
-<span class="c1"># Can&#39;t ignore errors — Result forces you to handle both variants</span>
+<span class="c1"># Failures are ordinary values — compare them, pass them around, store them</span>
 <span class="k">assert</span> <span class="n">get_user</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="n">User</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">))</span>
 <span class="k">assert</span> <span class="n">get_user</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="n">NotFound</span><span class="p">(</span><span class="n">user_id</span><span class="o">=-</span><span class="mi">1</span><span class="p">))</span>
 </code></pre></div>
 <h2 id="exhaustive-error-handling">Exhaustive error handling</h2>
+<p>The other half of the payoff: <code>match</code> both variants, and let <code>assert_never</code>
+prove every error case is handled. Add a variant to <code>GetUserError</code> and the
+type checker flags every site that doesn't handle it:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">assert_never</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">corrode</span><span class="w"> </span><span class="kn">import</span> <span class="n">Ok</span><span class="p">,</span> <span class="n">Err</span><span class="p">,</span> <span class="n">Result</span>
@@ -762,21 +825,108 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
             <span class="k">case</span> <span class="n">Forbidden</span><span class="p">(</span><span class="n">reason</span><span class="o">=</span><span class="n">reason</span><span class="p">):</span>
                 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Access denied: </span><span class="si">{</span><span class="n">reason</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
             <span class="k">case</span><span class="w"> </span><span class="k">_</span><span class="p">:</span>
-                <span class="c1"># If you add a new variant to GetUserError, mypy reports</span>
-                <span class="c1"># an error here until you handle it — compile-time safety</span>
+                <span class="c1"># a new, unhandled variant makes this a type error</span>
                 <span class="n">assert_never</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 </code></pre></div>
-<h2 id="guarantees">Guarantees</h2>
-<p><code>Ok</code> and <code>Err</code> are strict containers:</p>
+<h2 id="tour">Tour</h2>
+<p>One scenario — a tiny shop — threaded through the core combinators. Every
+method has a doctested example in the
+<a href="https://deliro.github.io/corrode/latest/api/result/">API reference</a>; the
+<code>_async</code> variants mirror their sync counterparts:</p>
+<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">corrode</span><span class="w"> </span><span class="kn">import</span> <span class="n">Ok</span><span class="p">,</span> <span class="n">Err</span><span class="p">,</span> <span class="n">Result</span><span class="p">,</span> <span class="n">from_optional</span>
+
+
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">Product</span><span class="p">:</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">price</span><span class="p">:</span> <span class="nb">int</span>
+
+
+<span class="n">CATALOG</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;tea&quot;</span><span class="p">:</span> <span class="n">Product</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;tea&quot;</span><span class="p">,</span> <span class="n">price</span><span class="o">=</span><span class="mi">300</span><span class="p">)}</span>
+<span class="n">STOCK</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;tea&quot;</span><span class="p">:</span> <span class="mi">2</span><span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">find_product</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="n">Product</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="c1"># from_optional bridges the idiomatic `T | None` into Result</span>
+    <span class="k">return</span> <span class="n">from_optional</span><span class="p">(</span><span class="n">CATALOG</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;unknown product: </span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">reserve</span><span class="p">(</span><span class="n">product</span><span class="p">:</span> <span class="n">Product</span><span class="p">,</span> <span class="n">qty</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="n">Product</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">STOCK</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">product</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">qty</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Err</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;out of stock: </span><span class="si">{</span><span class="n">product</span><span class="o">.</span><span class="n">name</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">product</span><span class="p">)</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_qty</span><span class="p">(</span><span class="n">raw</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">raw</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">int</span><span class="p">(</span><span class="n">raw</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">raw</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">Err</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;bad quantity: </span><span class="si">{</span><span class="n">raw</span><span class="si">!r}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+
+<span class="n">tea</span> <span class="o">=</span> <span class="n">Product</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;tea&quot;</span><span class="p">,</span> <span class="n">price</span><span class="o">=</span><span class="mi">300</span><span class="p">)</span>
+
+<span class="c1"># map transforms the success value; an Err passes through untouched</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;tea&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">price</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">300</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;mate&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">price</span><span class="p">)</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;unknown product: mate&quot;</span><span class="p">)</span>
+
+<span class="c1"># and_then chains a step that can itself fail...</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;tea&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">and_then</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">reserve</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="n">tea</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;tea&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">and_then</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">reserve</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">5</span><span class="p">))</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;out of stock: tea&quot;</span><span class="p">)</span>
+<span class="c1"># ...and short-circuits: on Err, reserve is never called</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;mate&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">and_then</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">reserve</span><span class="p">(</span><span class="n">p</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;unknown product: mate&quot;</span><span class="p">)</span>
+
+<span class="c1"># zip combines independent results into a tuple; the first Err wins</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;tea&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">parse_qty</span><span class="p">(</span><span class="s2">&quot;2&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">((</span><span class="n">tea</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;tea&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">parse_qty</span><span class="p">(</span><span class="s2">&quot;no&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;bad quantity: &#39;no&#39;&quot;</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;mate&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">parse_qty</span><span class="p">(</span><span class="s2">&quot;no&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;unknown product: mate&quot;</span><span class="p">)</span>
+
+<span class="c1"># or_else recovers from failure; an Ok passes through untouched</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;mate&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">or_else</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;tea&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="n">tea</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;tea&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">or_else</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;mate&quot;</span><span class="p">))</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="n">tea</span><span class="p">)</span>
+
+<span class="c1"># Results are ordinary values, so they can be stored. Reading one back</span>
+<span class="c1"># yields nesting, which flatten collapses — keeping &quot;no such order&quot;,</span>
+<span class="c1"># &quot;the order failed&quot;, and &quot;the order succeeded&quot; distinct</span>
+<span class="n">history</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Result</span><span class="p">[</span><span class="n">Product</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;tea&quot;</span><span class="p">:</span> <span class="n">reserve</span><span class="p">(</span><span class="n">tea</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span>
+    <span class="s2">&quot;mate&quot;</span><span class="p">:</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;out of stock: mate&quot;</span><span class="p">),</span>
+<span class="p">}</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">last_order</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="n">Result</span><span class="p">[</span><span class="n">Product</span><span class="p">,</span> <span class="nb">str</span><span class="p">],</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="k">return</span> <span class="n">from_optional</span><span class="p">(</span><span class="n">history</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">name</span><span class="p">),</span> <span class="s2">&quot;never ordered&quot;</span><span class="p">)</span>
+
+
+<span class="k">assert</span> <span class="n">last_order</span><span class="p">(</span><span class="s2">&quot;tea&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="n">tea</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">last_order</span><span class="p">(</span><span class="s2">&quot;mate&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;out of stock: mate&quot;</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">last_order</span><span class="p">(</span><span class="s2">&quot;chai&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;never ordered&quot;</span><span class="p">)</span>
+
+<span class="c1"># unwrap_or leaves Result-land with a fallback</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;tea&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">price</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">300</span>
+<span class="k">assert</span> <span class="n">find_product</span><span class="p">(</span><span class="s2">&quot;mate&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">p</span><span class="p">:</span> <span class="n">p</span><span class="o">.</span><span class="n">price</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span>
+</code></pre></div>
+<p>Also available — see the <a href="https://deliro.github.io/corrode/latest/api/result/">API reference</a>:</p>
 <ul>
-<li><strong>Immutable.</strong> The contained value cannot be reassigned or deleted after
-  construction (<code>AttributeError</code>). Instances are safe to share and to use as
-  dict keys or set members (hashable when the contained value is hashable).</li>
-<li><strong>No truth value.</strong> <code>if result:</code> is the classic silent bug — any <code>Result</code>
-  would be truthy, so a failure passes the check. <code>corrode</code> makes it loud at
-  runtime, and because <code>__bool__</code> is typed as <code>NoReturn</code>, a type checker
-  reports the body of <code>if result:</code> as unreachable before you ever run it:</li>
+<li>transforms: <code>map_err</code>, <code>map_or</code>, <code>map_or_else</code></li>
+<li>predicates: <code>is_ok</code>, <code>is_err</code>, <code>is_ok_and</code>, <code>is_err_and</code></li>
+<li>side effects: <code>inspect</code>, <code>inspect_err</code></li>
+<li>extraction: <code>ok</code>, <code>err</code>, <code>ok_value</code>, <code>err_value</code>, <code>unwrap</code>, <code>expect</code>,
+  <code>unwrap_or_else</code>, <code>unwrap_or_raise</code></li>
+<li><code>@as_result</code> / <code>@as_async_result</code> to wrap exception-raising code at the
+  boundary — shown in
+  <a href="#adopting-corrode-in-an-existing-codebase">Adopting corrode</a></li>
+<li><code>_async</code> variants of every combinator that takes a callback</li>
+<li><code>do()</code> notation — deprecated; see <a href="#but-why">But... why?</a></li>
 </ul>
+<h2 id="strict-by-design">Strict by design</h2>
+<p><code>Ok</code> and <code>Err</code> refuse to behave like ordinary containers wherever that would
+hide a bug.</p>
+<p>The most common one: <code>if result:</code> looks natural and is always wrong — any
+container would be truthy, so a failure would pass the check. <code>corrode</code>
+makes it loud at runtime, and because <code>__bool__</code> is typed as <code>NoReturn</code>, a
+type checker reports the body of <code>if result:</code> as unreachable before you
+ever run it:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">corrode</span><span class="w"> </span><span class="kn">import</span> <span class="n">Result</span><span class="p">,</span> <span class="n">Ok</span><span class="p">,</span> <span class="n">Err</span>
 
 <span class="n">result</span><span class="p">:</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;hidden failure&quot;</span><span class="p">)</span>
@@ -786,91 +936,13 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
 <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>  <span class="c1"># Ok and Err have no truth value; use is_ok()/is_err(), ...</span>
 </code></pre></div>
-<p>Use <code>is_ok()</code> / <code>is_err()</code>, pattern matching, or <code>is_ok_and()</code> instead.</p>
+<p>The same principle elsewhere:</p>
 <ul>
-<li><strong>Not general-purpose iterables.</strong> Iterating an <code>Err</code> outside <code>do()</code>
-  notation (e.g. <code>list(Err(...))</code>) raises <code>DoError</code> with an explanatory
-  message instead of silently misbehaving.</li>
-<li><strong><code>BaseException</code> is never swallowed.</strong> <code>@as_result</code> / <code>@as_async_result</code>
-  accept only <code>Exception</code> subclasses — <code>KeyboardInterrupt</code>, <code>SystemExit</code> and
-  <code>asyncio.CancelledError</code> always propagate, so task cancellation keeps
-  working.</li>
-<li><strong>Async utilities never leak tasks, never lose exceptions.</strong> Raised
-  exceptions always arrive as a single <code>ExceptionGroup</code> — even a lone one —
-  so what you catch never depends on timing. See
-  <a href="#exceptions-and-exceptiongroup">Exceptions and <code>ExceptionGroup</code></a>.</li>
-</ul>
-<h2 id="tour">Tour</h2>
-<p>A taste of the combinators. Every sync method has a doctested example in the
-<a href="https://deliro.github.io/corrode/latest/api/result/">API reference</a>; the <code>_async</code>
-variants mirror their sync counterparts:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">corrode</span><span class="w"> </span><span class="kn">import</span> <span class="n">Ok</span><span class="p">,</span> <span class="n">Err</span><span class="p">,</span> <span class="n">Result</span><span class="p">,</span> <span class="n">from_optional</span>
-
-
-<span class="nd">@dataclass</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">:</span>
-    <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
-    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
-
-
-<span class="k">def</span><span class="w"> </span><span class="nf">find_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="n">User</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-    <span class="n">users</span> <span class="o">=</span> <span class="p">{</span><span class="mi">1</span><span class="p">:</span> <span class="n">User</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">)}</span>
-    <span class="c1"># from_optional bridges the idiomatic `T | None` into Result</span>
-    <span class="k">return</span> <span class="n">from_optional</span><span class="p">(</span><span class="n">users</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">user_id</span><span class="p">),</span> <span class="sa">f</span><span class="s2">&quot;user </span><span class="si">{</span><span class="n">user_id</span><span class="si">}</span><span class="s2"> not found&quot;</span><span class="p">)</span>
-
-
-<span class="c1"># map transforms the success value; Err passes through untouched</span>
-<span class="k">assert</span> <span class="n">find_user</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="s2">&quot;Alice&quot;</span><span class="p">)</span>
-<span class="k">assert</span> <span class="n">find_user</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">name</span><span class="p">)</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;user 2 not found&quot;</span><span class="p">)</span>
-
-
-<span class="c1"># and_then chains fallible steps; the first Err short-circuits</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">check_admin</span><span class="p">(</span><span class="n">user</span><span class="p">:</span> <span class="n">User</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="n">User</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
-    <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">user</span><span class="p">)</span> <span class="k">if</span> <span class="n">user</span><span class="o">.</span><span class="n">id</span> <span class="o">==</span> <span class="mi">1</span> <span class="k">else</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;not an admin&quot;</span><span class="p">)</span>
-
-
-<span class="k">assert</span> <span class="n">find_user</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">and_then</span><span class="p">(</span><span class="n">check_admin</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="n">User</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">))</span>
-
-<span class="c1"># or_else recovers from failures</span>
-<span class="k">assert</span> <span class="n">find_user</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">or_else</span><span class="p">(</span><span class="k">lambda</span> <span class="n">_</span><span class="p">:</span> <span class="n">find_user</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">id</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-
-<span class="c1"># zip combines independent results into a tuple (first Err wins)</span>
-<span class="k">assert</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">zip</span><span class="p">(</span><span class="n">Ok</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">),</span> <span class="n">Ok</span><span class="p">(</span><span class="mf">3.0</span><span class="p">))</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">((</span><span class="mi">1</span><span class="p">,</span> <span class="s2">&quot;a&quot;</span><span class="p">,</span> <span class="mf">3.0</span><span class="p">))</span>
-
-<span class="c1"># flatten removes one level of nesting: Result[Result[T, E], E] -&gt; Result[T, E]</span>
-<span class="k">assert</span> <span class="n">Ok</span><span class="p">(</span><span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-
-<span class="c1"># unwrap_or extracts with a fallback when you leave Result-land</span>
-<span class="k">assert</span> <span class="n">find_user</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span><span class="o">.</span><span class="n">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">u</span><span class="p">:</span> <span class="n">u</span><span class="o">.</span><span class="n">name</span><span class="p">)</span><span class="o">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="s2">&quot;guest&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="s2">&quot;guest&quot;</span>
-</code></pre></div>
-<p>Wrap exception-raising code at the boundary with <code>@as_result</code> /
-<code>@as_async_result</code>:</p>
-<div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">corrode</span><span class="w"> </span><span class="kn">import</span> <span class="n">as_result</span><span class="p">,</span> <span class="n">Ok</span>
-
-<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;PORT&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;8080&quot;</span>
-
-
-<span class="c1"># Raised KeyError / ValueError become Err(exc); other exceptions propagate</span>
-<span class="nd">@as_result</span><span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span>
-<span class="k">def</span><span class="w"> </span><span class="nf">parse_port</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
-    <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
-
-
-<span class="k">assert</span> <span class="n">parse_port</span><span class="p">(</span><span class="s2">&quot;PORT&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">8080</span><span class="p">)</span>  <span class="c1"># Result[int, KeyError | ValueError]</span>
-</code></pre></div>
-<p>Also available — see the <a href="https://deliro.github.io/corrode/latest/api/result/">API reference</a>:</p>
-<ul>
-<li>transforms: <code>map_err</code>, <code>map_or</code>, <code>map_or_else</code></li>
-<li>predicates: <code>is_ok</code>, <code>is_err</code>, <code>is_ok_and</code>, <code>is_err_and</code></li>
-<li>side effects: <code>inspect</code>, <code>inspect_err</code></li>
-<li>extraction: <code>ok</code>, <code>err</code>, <code>ok_value</code>, <code>err_value</code>, <code>unwrap</code>, <code>expect</code>,
-  <code>unwrap_or_else</code>, <code>unwrap_or_raise</code></li>
-<li><code>_async</code> variants of every combinator that takes a callback</li>
-<li><code>do()</code> notation — <strong>deprecated</strong>: the annotation it requires is not checked
-  by type checkers, which defeats the purpose; calling it emits a
-  <code>DeprecationWarning</code></li>
+<li><strong>No iteration.</strong> <code>list(Err(...))</code> or <code>for x in result</code> raises with an
+  explanatory message instead of silently producing nothing.</li>
+<li><strong>Immutable.</strong> The contained value cannot be reassigned or deleted after
+  construction. Instances are safe to share and to use as dict keys or set
+  members (hashable when the contained value is hashable).</li>
 </ul>
 <h2 id="iterator-utilities">Iterator utilities</h2>
 <p><code>corrode.iterator</code> works with iterables of <code>Result</code> values
@@ -1019,15 +1091,15 @@ infrastructure failure — it propagates and cancels everything else. The
 contract is uniform: <strong>exceptions from the concurrent utilities always arrive
 wrapped in an <code>ExceptionGroup</code>, even when only one task failed.</strong> One failure
 is a group of one.</p>
-<p>This is deliberate. Whether one or several tasks fail "at the same time" is a
-race — if a lone exception propagated bare, <code>except ConnectionError</code> would
-work in testing and silently miss in production the day two requests fail in
-the same event-loop tick. The exception type you catch must never depend on
-timing, so there is exactly one thing to write: <code>except*</code> (the same rule
-<code>asyncio.TaskGroup</code> follows). Tasks that raise <em>while being cancelled</em> are
-collected into the group too — nothing is silently discarded.</p>
-<p>The only exception is sequential <code>try_reduce</code>: it runs one coroutine at a
-time, so only one can fail, and it propagates bare.</p>
+<p>This is deliberate. How many tasks fail "at the same time" is a race — if a
+lone exception propagated bare, <code>except ConnectionError</code> would work in
+testing and miss the day two requests fail in the same event-loop tick. What
+you catch must not depend on timing, so there is exactly one thing to write:
+<code>except*</code> — the same rule <code>asyncio.TaskGroup</code> follows. Tasks that raise
+<em>while being cancelled</em> are collected into the group too — nothing is
+silently discarded.</p>
+<p>One carve-out: sequential <code>try_reduce</code> runs one coroutine at a time, so only
+one can fail, and it propagates bare.</p>
 <div class="highlight"><pre><span></span><code><span class="kn">import</span><span class="w"> </span><span class="nn">asyncio</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">corrode</span><span class="w"> </span><span class="kn">import</span> <span class="n">Ok</span><span class="p">,</span> <span class="n">Result</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">corrode.async_iterator</span><span class="w"> </span><span class="kn">import</span> <span class="n">collect</span>
@@ -1062,8 +1134,7 @@ time, so only one can fail, and it propagates bare.</p>
 <span class="n">asyncio</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">main</span><span class="p">())</span>
 </code></pre></div>
 <h2 id="adopting-corrode-in-an-existing-codebase">Adopting corrode in an existing codebase</h2>
-<p>You don't have to rewrite everything at once — <code>corrode</code> is designed for
-gradual adoption:</p>
+<p><code>corrode</code> is designed for gradual adoption — no big-bang rewrite:</p>
 <ol>
 <li><strong>Wrap</strong> existing functions with <code>@as_result(ExcType, ...)</code> — the body is
    unchanged, callers start receiving <code>Result</code> with the exception inside <code>Err</code>.</li>
@@ -1080,13 +1151,29 @@ gradual adoption:</p>
 <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s2">&quot;PORT&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;8080&quot;</span>
 
 
-<span class="c1"># Step 1: wrap — the body is untouched, callers get Result</span>
+<span class="c1"># Step 1: wrap — the body is untouched, callers get Result.</span>
+<span class="c1"># Raised KeyError / ValueError become Err(exc); other exceptions propagate.</span>
 <span class="nd">@as_result</span><span class="p">(</span><span class="ne">KeyError</span><span class="p">,</span> <span class="ne">ValueError</span><span class="p">)</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">parse_port_wrapped</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
     <span class="k">return</span> <span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
 
 
-<span class="k">assert</span> <span class="n">parse_port_wrapped</span><span class="p">(</span><span class="s2">&quot;PORT&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">8080</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">parse_port_wrapped</span><span class="p">(</span><span class="s2">&quot;PORT&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">8080</span><span class="p">)</span>  <span class="c1"># Result[int, KeyError | ValueError]</span>
+
+
+<span class="c1"># Step 2: explicit Err — the decorator is gone, the error types move into</span>
+<span class="c1"># the signature; callers don&#39;t change</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">parse_port_explicit</span><span class="p">(</span><span class="n">key</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="ne">KeyError</span> <span class="o">|</span> <span class="ne">ValueError</span><span class="p">]:</span>
+    <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Err</span><span class="p">(</span><span class="ne">KeyError</span><span class="p">(</span><span class="n">key</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="n">key</span><span class="p">]))</span>
+    <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">Err</span><span class="p">(</span><span class="n">exc</span><span class="p">)</span>
+
+
+<span class="k">assert</span> <span class="n">parse_port_explicit</span><span class="p">(</span><span class="s2">&quot;PORT&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">8080</span><span class="p">)</span>
+<span class="k">assert</span> <span class="n">parse_port_explicit</span><span class="p">(</span><span class="s2">&quot;MISSING&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">is_err</span><span class="p">()</span>
 
 
 <span class="c1"># Step 3: domain error types instead of exceptions</span>
@@ -1114,14 +1201,71 @@ gradual adoption:</p>
 <span class="k">assert</span> <span class="n">parse_port</span><span class="p">(</span><span class="s2">&quot;PORT&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="mi">8080</span><span class="p">)</span>
 <span class="k">assert</span> <span class="n">parse_port</span><span class="p">(</span><span class="s2">&quot;MISSING&quot;</span><span class="p">)</span> <span class="o">==</span> <span class="n">Err</span><span class="p">(</span><span class="n">MissingKey</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s2">&quot;MISSING&quot;</span><span class="p">))</span>
 </code></pre></div>
+<p><code>@as_result</code> accepts only <code>Exception</code> subclasses — <code>KeyboardInterrupt</code>,
+<code>SystemExit</code>, and <code>asyncio.CancelledError</code> always propagate, so Ctrl-C and
+task cancellation keep working no matter what you wrap.</p>
 <p><code>try</code>/<code>except</code> and <code>Result</code> mix freely in the same function — catch what you
 caught before and wrap it in <code>Err</code>.</p>
 <h2 id="typing">Typing</h2>
 <p><code>corrode</code> is fully typed and ships a <code>py.typed</code> marker (<a href="https://peps.python.org/pep-0561/">PEP 561</a>) —
 type information works out of the box, no stubs needed. Every release is
-verified against <strong>four</strong> type checkers in strict mode: mypy, basedpyright,
-ty, and pyrefly. All README examples are executed <em>and</em> type-checked in CI;
-all docstring examples run as doctests.</p>
+verified against four type checkers in strict mode: mypy, basedpyright, ty,
+and pyrefly. All README examples are executed <em>and</em> type-checked in CI; all
+docstring examples run as doctests.</p>
+<h2 id="but-why">But... why?</h2>
+<p>Answers to the questions every "Result vs exceptions in Python" debate
+arrives at.</p>
+<h3 id="doesnt-this-give-me-two-error-channels-instead-of-one">Doesn't this give me two error channels instead of one?</h3>
+<p>Yes — and that is the architecture of Rust and Go, not a Python compromise.
+Rust has <code>Result</code> <em>and</em> panics; Go has <code>error</code> values <em>and</em> <code>panic</code>. The
+channels carry different things: an <code>Err</code> is an expected failure, part of the
+contract and visible in the signature; a raised exception is a bug or an
+infrastructure fault the caller cannot meaningfully handle at the call site.</p>
+<p>The honest difference: Python's ecosystem raises exceptions for <em>expected</em>
+failures too (<code>KeyError</code>, a unique-constraint violation). Contain that leak
+at the boundary — wrap third-party calls with <code>@as_result</code> in your adapter
+layer — and the interior of your domain keeps the contract: every <code>Err</code> is
+in the signature, and any exception that escapes is by definition a bug that
+should crash loudly.</p>
+<p>The alternative isn't one channel — it's one <em>invisible</em> channel. A
+signature that returns <code>User</code> and says nothing about the five ways it can
+fail has the same two channels; it just hides both.</p>
+<h3 id="where-is-the-operator">Where is the <code>?</code> operator?</h3>
+<p>There is no honest way to build it. Rust's <code>?</code> is not just syntax: the
+compiler checks every propagated error against the declared return type and
+converts it via <code>From</code>. Every Python emulation keeps the syntax and loses the
+check:</p>
+<ul>
+<li><strong>Decorator + control-flow exception</strong> (<code>resulty</code>, <code>meiga</code>, and the
+  <code>@pipeline</code> that <code>returns</code> shipped and later removed): an unwrap-like
+  method typed <code>-&gt; T</code> that secretly raises, caught by the decorator. The
+  error type is erased at the raise site, so nothing verifies the propagated
+  errors against the function's declared <code>E</code> — the signature can lie.</li>
+<li><strong>Generator do-notation</strong> (corrode's own <code>do()</code>, now deprecated): the same
+  hole — the annotation it requires is not checked by type checkers.</li>
+<li><strong>AST rewriting at import time</strong> (how pytest rewrites asserts): produces
+  real early returns, but requires installing an import hook before user code
+  loads, confuses coverage and debuggers, and the typing hole remains.</li>
+</ul>
+<p>A fix would require type-checker plugins, and neither pyright nor ty nor
+pyrefly has a plugin API. <code>corrode</code> does not ship features whose static
+types can lie — so propagation is spelled with <code>match</code>, combinators, or the
+iterator utilities.</p>
+<h3 id="isnt-match-on-every-fallible-call-verbose">Isn't <code>match</code> on every fallible call verbose?</h3>
+<p>Yes — a constant, local, predictable cost. Go has paid it (<code>if err != nil</code>)
+at industrial scale for over a decade, and when offered built-in propagation
+(the <code>try</code> proposal, 2019) the community rejected it, preferring explicit
+control flow. In practice the tax is smaller than it looks: <code>map</code>,
+<code>and_then</code>, and <code>or_else</code> chain the linear cases, the iterator utilities
+cover collections, and <code>match</code> remains only where control flow genuinely
+branches — where the verbosity <em>is</em> the information.</p>
+<h3 id="when-should-i-not-use-corrode">When should I not use corrode?</h3>
+<p>In thin glue over exception-raising libraries. If a module has no domain
+logic of its own — it just calls an ORM or HTTP client and forwards the
+outcome — wrapping every call gives you <code>Result</code> <em>and</em> <code>try/except</code> in the
+same function: the worst of both worlds. Use <code>Result</code> where failures are
+part of your domain and you can enumerate them; leave plain exceptions at
+edges that are already all-exception territory.</p>
 
 
 
