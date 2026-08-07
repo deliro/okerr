@@ -207,7 +207,7 @@ wheels = [
 
 [[package]]
 name = "corrode"
-version = "1.0.0"
+version = "1.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
