@@ -17,24 +17,23 @@ A Rust-like `Result` type for Python 3.11+, fully type annotated.
 
 </div>
 
-📚 **[Documentation](https://deliro.github.io/corrode/)** — the full API
-reference is generated from the source docstrings, so it always matches the
-code, and every example in it is executed as a doctest in CI. The site is
-versioned: it opens on `latest` (the newest release), every past release stays
-available, and `dev` tracks unreleased `main`. Pick one in the header.
+📚 **[Documentation](https://deliro.github.io/corrode/latest/)** — versioned
+API reference generated from the source docstrings; every example runs as a
+doctest in CI.
 
 ## Table of Contents
 
 - [Installation](#installation)
 - [Why](#why)
 - [Exhaustive error handling](#exhaustive-error-handling)
-- [Guarantees](#guarantees)
 - [Tour](#tour)
+- [Strict by design](#strict-by-design)
 - [Iterator utilities](#iterator-utilities)
 - [Async iterator utilities](#async-iterator-utilities)
   - [Exceptions and `ExceptionGroup`](#exceptions-and-exceptiongroup)
 - [Adopting corrode in an existing codebase](#adopting-corrode-in-an-existing-codebase)
 - [Typing](#typing)
+- [But... why?](#but-why)
 - [License](#license)
 
 <!-- --8<-- [start:body] -->
@@ -77,12 +76,12 @@ def get_user(user_id: int) -> User:
     return User(id=user_id, name="Alice")
 
 
-# The caller has no idea this can fail — until it does in production
+# The caller has no idea this can fail
 user = get_user(1)
 assert user.name == "Alice"
 ```
 
-`Result[T, E]` is a union of `Ok[T] | Err[E]`:
+The same function with `Result[T, E]` — a union of `Ok[T] | Err[E]`:
 
 ```python
 from dataclasses import dataclass
@@ -110,7 +109,6 @@ type GetUserError = NotFound | Forbidden
 
 # Errors are now part of the return type — callers see exactly what can go wrong
 def get_user(user_id: int) -> Result[User, GetUserError]:
-    # Instead of raise, return Err — the type checker tracks it
     if user_id <= 0:
         return Err(NotFound(user_id=user_id))
     if user_id == 13:
@@ -118,12 +116,16 @@ def get_user(user_id: int) -> Result[User, GetUserError]:
     return Ok(User(id=user_id, name="Alice"))
 
 
-# Can't ignore errors — Result forces you to handle both variants
+# Failures are ordinary values — compare them, pass them around, store them
 assert get_user(1) == Ok(User(id=1, name="Alice"))
 assert get_user(-1) == Err(NotFound(user_id=-1))
 ```
 
 ## Exhaustive error handling
+
+The other half of the payoff: `match` both variants, and let `assert_never`
+prove every error case is handled. Add a variant to `GetUserError` and the
+type checker flags every site that doesn't handle it:
 
 ```python
 from dataclasses import dataclass
@@ -169,22 +171,115 @@ match get_user(42):
             case Forbidden(reason=reason):
                 print(f"Access denied: {reason}")
             case _:
-                # If you add a new variant to GetUserError, mypy reports
-                # an error here until you handle it — compile-time safety
+                # a new, unhandled variant makes this a type error
                 assert_never(e)
 ```
 
-## Guarantees
+## Tour
 
-`Ok` and `Err` are strict containers:
+One scenario — a tiny shop — threaded through the core combinators. Every
+method has a doctested example in the
+[API reference](https://deliro.github.io/corrode/latest/api/result/); the
+`_async` variants mirror their sync counterparts:
 
-- **Immutable.** The contained value cannot be reassigned or deleted after
-  construction (`AttributeError`). Instances are safe to share and to use as
-  dict keys or set members (hashable when the contained value is hashable).
-- **No truth value.** `if result:` is the classic silent bug — any `Result`
-  would be truthy, so a failure passes the check. `corrode` makes it loud at
-  runtime, and because `__bool__` is typed as `NoReturn`, a type checker
-  reports the body of `if result:` as unreachable before you ever run it:
+```python
+from dataclasses import dataclass
+from corrode import Ok, Err, Result, from_optional
+
+
+@dataclass
+class Product:
+    name: str
+    price: int
+
+
+CATALOG = {"tea": Product(name="tea", price=300)}
+STOCK = {"tea": 2}
+
+
+def find_product(name: str) -> Result[Product, str]:
+    # from_optional bridges the idiomatic `T | None` into Result
+    return from_optional(CATALOG.get(name), f"unknown product: {name}")
+
+
+def reserve(product: Product, qty: int) -> Result[Product, str]:
+    if STOCK.get(product.name, 0) < qty:
+        return Err(f"out of stock: {product.name}")
+    return Ok(product)
+
+
+def parse_qty(raw: str) -> Result[int, str]:
+    if raw.isdigit() and int(raw) > 0:
+        return Ok(int(raw))
+    return Err(f"bad quantity: {raw!r}")
+
+
+tea = Product(name="tea", price=300)
+
+# map transforms the success value; an Err passes through untouched
+assert find_product("tea").map(lambda p: p.price) == Ok(300)
+assert find_product("mate").map(lambda p: p.price) == Err("unknown product: mate")
+
+# and_then chains a step that can itself fail...
+assert find_product("tea").and_then(lambda p: reserve(p, 1)) == Ok(tea)
+assert find_product("tea").and_then(lambda p: reserve(p, 5)) == Err("out of stock: tea")
+# ...and short-circuits: on Err, reserve is never called
+assert find_product("mate").and_then(lambda p: reserve(p, 1)) == Err("unknown product: mate")
+
+# zip combines independent results into a tuple; the first Err wins
+assert find_product("tea").zip(parse_qty("2")) == Ok((tea, 2))
+assert find_product("tea").zip(parse_qty("no")) == Err("bad quantity: 'no'")
+assert find_product("mate").zip(parse_qty("no")) == Err("unknown product: mate")
+
+# or_else recovers from failure; an Ok passes through untouched
+assert find_product("mate").or_else(lambda _: find_product("tea")) == Ok(tea)
+assert find_product("tea").or_else(lambda _: find_product("mate")) == Ok(tea)
+
+# Results are ordinary values, so they can be stored. Reading one back
+# yields nesting, which flatten collapses — keeping "no such order",
+# "the order failed", and "the order succeeded" distinct
+history: dict[str, Result[Product, str]] = {
+    "tea": reserve(tea, 2),
+    "mate": Err("out of stock: mate"),
+}
+
+
+def last_order(name: str) -> Result[Result[Product, str], str]:
+    return from_optional(history.get(name), "never ordered")
+
+
+assert last_order("tea").flatten() == Ok(tea)
+assert last_order("mate").flatten() == Err("out of stock: mate")
+assert last_order("chai").flatten() == Err("never ordered")
+
+# unwrap_or leaves Result-land with a fallback
+assert find_product("tea").map(lambda p: p.price).unwrap_or(0) == 300
+assert find_product("mate").map(lambda p: p.price).unwrap_or(0) == 0
+```
+
+Also available — see the [API reference](https://deliro.github.io/corrode/latest/api/result/):
+
+- transforms: `map_err`, `map_or`, `map_or_else`
+- predicates: `is_ok`, `is_err`, `is_ok_and`, `is_err_and`
+- side effects: `inspect`, `inspect_err`
+- extraction: `ok`, `err`, `ok_value`, `err_value`, `unwrap`, `expect`,
+  `unwrap_or_else`, `unwrap_or_raise`
+- `@as_result` / `@as_async_result` to wrap exception-raising code at the
+  boundary — shown in
+  [Adopting corrode](#adopting-corrode-in-an-existing-codebase)
+- `_async` variants of every combinator that takes a callback
+- `do()` notation — deprecated; see [But... why?](#but-why)
+
+## Strict by design
+
+`Ok` and `Err` refuse to behave like ordinary containers wherever that would
+hide a bug.
+
+The most common one: `if result:` looks natural and is always wrong — any
+container would be truthy, so a failure would pass the check. `corrode`
+makes it loud at runtime, and because `__bool__` is typed as `NoReturn`, a
+type checker reports the body of `if result:` as unreachable before you
+ever run it:
 
 ```python
 from corrode import Result, Ok, Err
@@ -197,98 +292,13 @@ except TypeError as e:
     print(e)  # Ok and Err have no truth value; use is_ok()/is_err(), ...
 ```
 
-Use `is_ok()` / `is_err()`, pattern matching, or `is_ok_and()` instead.
+The same principle elsewhere:
 
-- **Not general-purpose iterables.** Iterating an `Err` outside `do()`
-  notation (e.g. `list(Err(...))`) raises `DoError` with an explanatory
-  message instead of silently misbehaving.
-- **`BaseException` is never swallowed.** `@as_result` / `@as_async_result`
-  accept only `Exception` subclasses — `KeyboardInterrupt`, `SystemExit` and
-  `asyncio.CancelledError` always propagate, so task cancellation keeps
-  working.
-- **Async utilities never leak tasks, never lose exceptions.** Raised
-  exceptions always arrive as a single `ExceptionGroup` — even a lone one —
-  so what you catch never depends on timing. See
-  [Exceptions and `ExceptionGroup`](#exceptions-and-exceptiongroup).
-
-## Tour
-
-A taste of the combinators. Every sync method has a doctested example in the
-[API reference](https://deliro.github.io/corrode/latest/api/result/); the `_async`
-variants mirror their sync counterparts:
-
-```python
-from dataclasses import dataclass
-from corrode import Ok, Err, Result, from_optional
-
-
-@dataclass
-class User:
-    id: int
-    name: str
-
-
-def find_user(user_id: int) -> Result[User, str]:
-    users = {1: User(id=1, name="Alice")}
-    # from_optional bridges the idiomatic `T | None` into Result
-    return from_optional(users.get(user_id), f"user {user_id} not found")
-
-
-# map transforms the success value; Err passes through untouched
-assert find_user(1).map(lambda u: u.name) == Ok("Alice")
-assert find_user(2).map(lambda u: u.name) == Err("user 2 not found")
-
-
-# and_then chains fallible steps; the first Err short-circuits
-def check_admin(user: User) -> Result[User, str]:
-    return Ok(user) if user.id == 1 else Err("not an admin")
-
-
-assert find_user(1).and_then(check_admin) == Ok(User(id=1, name="Alice"))
-
-# or_else recovers from failures
-assert find_user(2).or_else(lambda _: find_user(1)).map(lambda u: u.id) == Ok(1)
-
-# zip combines independent results into a tuple (first Err wins)
-assert Ok(1).zip(Ok("a"), Ok(3.0)) == Ok((1, "a", 3.0))
-
-# flatten removes one level of nesting: Result[Result[T, E], E] -> Result[T, E]
-assert Ok(Ok(1)).flatten() == Ok(1)
-
-# unwrap_or extracts with a fallback when you leave Result-land
-assert find_user(2).map(lambda u: u.name).unwrap_or("guest") == "guest"
-```
-
-Wrap exception-raising code at the boundary with `@as_result` /
-`@as_async_result`:
-
-```python
-import os
-from corrode import as_result, Ok
-
-os.environ["PORT"] = "8080"
-
-
-# Raised KeyError / ValueError become Err(exc); other exceptions propagate
-@as_result(KeyError, ValueError)
-def parse_port(key: str) -> int:
-    return int(os.environ[key])
-
-
-assert parse_port("PORT") == Ok(8080)  # Result[int, KeyError | ValueError]
-```
-
-Also available — see the [API reference](https://deliro.github.io/corrode/latest/api/result/):
-
-- transforms: `map_err`, `map_or`, `map_or_else`
-- predicates: `is_ok`, `is_err`, `is_ok_and`, `is_err_and`
-- side effects: `inspect`, `inspect_err`
-- extraction: `ok`, `err`, `ok_value`, `err_value`, `unwrap`, `expect`,
-  `unwrap_or_else`, `unwrap_or_raise`
-- `_async` variants of every combinator that takes a callback
-- `do()` notation — **deprecated**: the annotation it requires is not checked
-  by type checkers, which defeats the purpose; calling it emits a
-  `DeprecationWarning`
+- **No iteration.** `list(Err(...))` or `for x in result` raises with an
+  explanatory message instead of silently producing nothing.
+- **Immutable.** The contained value cannot be reassigned or deleted after
+  construction. Instances are safe to share and to use as dict keys or set
+  members (hashable when the contained value is hashable).
 
 ## Iterator utilities
 
@@ -389,16 +399,16 @@ contract is uniform: **exceptions from the concurrent utilities always arrive
 wrapped in an `ExceptionGroup`, even when only one task failed.** One failure
 is a group of one.
 
-This is deliberate. Whether one or several tasks fail "at the same time" is a
-race — if a lone exception propagated bare, `except ConnectionError` would
-work in testing and silently miss in production the day two requests fail in
-the same event-loop tick. The exception type you catch must never depend on
-timing, so there is exactly one thing to write: `except*` (the same rule
-`asyncio.TaskGroup` follows). Tasks that raise *while being cancelled* are
-collected into the group too — nothing is silently discarded.
+This is deliberate. How many tasks fail "at the same time" is a race — if a
+lone exception propagated bare, `except ConnectionError` would work in
+testing and miss the day two requests fail in the same event-loop tick. What
+you catch must not depend on timing, so there is exactly one thing to write:
+`except*` — the same rule `asyncio.TaskGroup` follows. Tasks that raise
+*while being cancelled* are collected into the group too — nothing is
+silently discarded.
 
-The only exception is sequential `try_reduce`: it runs one coroutine at a
-time, so only one can fail, and it propagates bare.
+One carve-out: sequential `try_reduce` runs one coroutine at a time, so only
+one can fail, and it propagates bare.
 
 ```python
 import asyncio
@@ -437,8 +447,7 @@ asyncio.run(main())
 
 ## Adopting corrode in an existing codebase
 
-You don't have to rewrite everything at once — `corrode` is designed for
-gradual adoption:
+`corrode` is designed for gradual adoption — no big-bang rewrite:
 
 1. **Wrap** existing functions with `@as_result(ExcType, ...)` — the body is
    unchanged, callers start receiving `Result` with the exception inside `Err`.
@@ -456,13 +465,29 @@ from corrode import as_result, Ok, Err, Result
 os.environ["PORT"] = "8080"
 
 
-# Step 1: wrap — the body is untouched, callers get Result
+# Step 1: wrap — the body is untouched, callers get Result.
+# Raised KeyError / ValueError become Err(exc); other exceptions propagate.
 @as_result(KeyError, ValueError)
 def parse_port_wrapped(key: str) -> int:
     return int(os.environ[key])
 
 
-assert parse_port_wrapped("PORT") == Ok(8080)
+assert parse_port_wrapped("PORT") == Ok(8080)  # Result[int, KeyError | ValueError]
+
+
+# Step 2: explicit Err — the decorator is gone, the error types move into
+# the signature; callers don't change
+def parse_port_explicit(key: str) -> Result[int, KeyError | ValueError]:
+    if key not in os.environ:
+        return Err(KeyError(key))
+    try:
+        return Ok(int(os.environ[key]))
+    except ValueError as exc:
+        return Err(exc)
+
+
+assert parse_port_explicit("PORT") == Ok(8080)
+assert parse_port_explicit("MISSING").is_err()
 
 
 # Step 3: domain error types instead of exceptions
@@ -491,6 +516,10 @@ assert parse_port("PORT") == Ok(8080)
 assert parse_port("MISSING") == Err(MissingKey(key="MISSING"))
 ```
 
+`@as_result` accepts only `Exception` subclasses — `KeyboardInterrupt`,
+`SystemExit`, and `asyncio.CancelledError` always propagate, so Ctrl-C and
+task cancellation keep working no matter what you wrap.
+
 `try`/`except` and `Result` mix freely in the same function — catch what you
 caught before and wrap it in `Err`.
 
@@ -498,16 +527,82 @@ caught before and wrap it in `Err`.
 
 `corrode` is fully typed and ships a `py.typed` marker ([PEP 561](https://peps.python.org/pep-0561/)) —
 type information works out of the box, no stubs needed. Every release is
-verified against **four** type checkers in strict mode: mypy, basedpyright,
-ty, and pyrefly. All README examples are executed *and* type-checked in CI;
-all docstring examples run as doctests.
+verified against four type checkers in strict mode: mypy, basedpyright, ty,
+and pyrefly. All README examples are executed *and* type-checked in CI; all
+docstring examples run as doctests.
+
+## But... why?
+
+Answers to the questions every "Result vs exceptions in Python" debate
+arrives at.
+
+### Doesn't this give me two error channels instead of one?
+
+Yes — and that is the architecture of Rust and Go, not a Python compromise.
+Rust has `Result` *and* panics; Go has `error` values *and* `panic`. The
+channels carry different things: an `Err` is an expected failure, part of the
+contract and visible in the signature; a raised exception is a bug or an
+infrastructure fault the caller cannot meaningfully handle at the call site.
+
+The honest difference: Python's ecosystem raises exceptions for *expected*
+failures too (`KeyError`, a unique-constraint violation). Contain that leak
+at the boundary — wrap third-party calls with `@as_result` in your adapter
+layer — and the interior of your domain keeps the contract: every `Err` is
+in the signature, and any exception that escapes is by definition a bug that
+should crash loudly.
+
+The alternative isn't one channel — it's one *invisible* channel. A
+signature that returns `User` and says nothing about the five ways it can
+fail has the same two channels; it just hides both.
+
+### Where is the `?` operator?
+
+There is no honest way to build it. Rust's `?` is not just syntax: the
+compiler checks every propagated error against the declared return type and
+converts it via `From`. Every Python emulation keeps the syntax and loses the
+check:
+
+- **Decorator + control-flow exception** (`resulty`, `meiga`, and the
+  `@pipeline` that `returns` shipped and later removed): an unwrap-like
+  method typed `-> T` that secretly raises, caught by the decorator. The
+  error type is erased at the raise site, so nothing verifies the propagated
+  errors against the function's declared `E` — the signature can lie.
+- **Generator do-notation** (corrode's own `do()`, now deprecated): the same
+  hole — the annotation it requires is not checked by type checkers.
+- **AST rewriting at import time** (how pytest rewrites asserts): produces
+  real early returns, but requires installing an import hook before user code
+  loads, confuses coverage and debuggers, and the typing hole remains.
+
+A fix would require type-checker plugins, and neither pyright nor ty nor
+pyrefly has a plugin API. `corrode` does not ship features whose static
+types can lie — so propagation is spelled with `match`, combinators, or the
+iterator utilities.
+
+### Isn't `match` on every fallible call verbose?
+
+Yes — a constant, local, predictable cost. Go has paid it (`if err != nil`)
+at industrial scale for over a decade, and when offered built-in propagation
+(the `try` proposal, 2019) the community rejected it, preferring explicit
+control flow. In practice the tax is smaller than it looks: `map`,
+`and_then`, and `or_else` chain the linear cases, the iterator utilities
+cover collections, and `match` remains only where control flow genuinely
+branches — where the verbosity *is* the information.
+
+### When should I not use corrode?
+
+In thin glue over exception-raising libraries. If a module has no domain
+logic of its own — it just calls an ORM or HTTP client and forwards the
+outcome — wrapping every call gives you `Result` *and* `try/except` in the
+same function: the worst of both worlds. Use `Result` where failures are
+part of your domain and you can enumerate them; leave plain exceptions at
+edges that are already all-exception territory.
 
 <!-- --8<-- [end:body] -->
 
 ## Acknowledgements
 
-`corrode` is inspired by and originally forked from [rustedpy/result](https://github.com/rustedpy/result).
-We are grateful for that library's existence — it laid the foundation for bringing Rust-style result types to Python and made this project possible.
+`corrode` started as a fork of [rustedpy/result](https://github.com/rustedpy/result),
+which laid the groundwork for Rust-style result types in Python.
 
 ## License
 
