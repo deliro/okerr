@@ -660,10 +660,12 @@ raise, what it raises, or whether the caller remembered to handle it.
 Bugs hide until production, and <code>except Exception</code> becomes the norm:</p>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 
+
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">:</span>
     <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
+
 
 <span class="c1"># Can this raise? What exceptions? The signature doesn&#39;t tell you.</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">User</span><span class="p">:</span>
@@ -673,6 +675,7 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
         <span class="k">raise</span> <span class="ne">PermissionError</span><span class="p">(</span><span class="s2">&quot;Access denied&quot;</span><span class="p">)</span>
     <span class="k">return</span> <span class="n">User</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">)</span>
 
+
 <span class="c1"># The caller has no idea this can fail — until it does in production</span>
 <span class="n">user</span> <span class="o">=</span> <span class="n">get_user</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
 <span class="k">assert</span> <span class="n">user</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;Alice&quot;</span>
@@ -681,20 +684,25 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">corrode</span><span class="w"> </span><span class="kn">import</span> <span class="n">Result</span><span class="p">,</span> <span class="n">Ok</span><span class="p">,</span> <span class="n">Err</span>
 
+
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">User</span><span class="p">:</span>
     <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
 
+
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">NotFound</span><span class="p">:</span>
     <span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span>
+
 
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Forbidden</span><span class="p">:</span>
     <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span>
 
+
 <span class="nb">type</span> <span class="n">GetUserError</span> <span class="o">=</span> <span class="n">NotFound</span> <span class="o">|</span> <span class="n">Forbidden</span>
+
 
 <span class="c1"># Errors are now part of the return type — callers see exactly what can go wrong</span>
 <span class="k">def</span><span class="w"> </span><span class="nf">get_user</span><span class="p">(</span><span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Result</span><span class="p">[</span><span class="n">User</span><span class="p">,</span> <span class="n">GetUserError</span><span class="p">]:</span>
@@ -704,6 +712,7 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
     <span class="k">if</span> <span class="n">user_id</span> <span class="o">==</span> <span class="mi">13</span><span class="p">:</span>
         <span class="k">return</span> <span class="n">Err</span><span class="p">(</span><span class="n">Forbidden</span><span class="p">(</span><span class="n">reason</span><span class="o">=</span><span class="s2">&quot;banned&quot;</span><span class="p">))</span>
     <span class="k">return</span> <span class="n">Ok</span><span class="p">(</span><span class="n">User</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">user_id</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">))</span>
+
 
 <span class="c1"># Can&#39;t ignore errors — Result forces you to handle both variants</span>
 <span class="k">assert</span> <span class="n">get_user</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span> <span class="o">==</span> <span class="n">Ok</span><span class="p">(</span><span class="n">User</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Alice&quot;</span><span class="p">))</span>
@@ -720,13 +729,16 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
     <span class="nb">id</span><span class="p">:</span> <span class="nb">int</span>
     <span class="n">name</span><span class="p">:</span> <span class="nb">str</span>
 
+
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">NotFound</span><span class="p">:</span>
     <span class="n">user_id</span><span class="p">:</span> <span class="nb">int</span>
 
+
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">Forbidden</span><span class="p">:</span>
     <span class="n">reason</span><span class="p">:</span> <span class="nb">str</span>
+
 
 <span class="nb">type</span> <span class="n">GetUserError</span> <span class="o">=</span> <span class="n">NotFound</span> <span class="o">|</span> <span class="n">Forbidden</span>
 
@@ -761,15 +773,16 @@ Bugs hide until production, and <code>except Exception</code> becomes the norm:<
   construction (<code>AttributeError</code>). Instances are safe to share and to use as
   dict keys or set members (hashable when the contained value is hashable).</li>
 <li><strong>No truth value.</strong> <code>if result:</code> is the classic silent bug — any <code>Result</code>
-  would be truthy, so a failure passes the check. <code>corrode</code> makes it loud:</li>
+  would be truthy, so a failure passes the check. <code>corrode</code> makes it loud at
+  runtime, and because <code>__bool__</code> is typed as <code>NoReturn</code>, a type checker
+  reports the body of <code>if result:</code> as unreachable before you ever run it:</li>
 </ul>
 <div class="highlight"><pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">corrode</span><span class="w"> </span><span class="kn">import</span> <span class="n">Result</span><span class="p">,</span> <span class="n">Ok</span><span class="p">,</span> <span class="n">Err</span>
 
 <span class="n">result</span><span class="p">:</span> <span class="n">Result</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">Err</span><span class="p">(</span><span class="s2">&quot;hidden failure&quot;</span><span class="p">)</span>
 
 <span class="k">try</span><span class="p">:</span>
-    <span class="k">if</span> <span class="n">result</span><span class="p">:</span>  <span class="c1"># bug: this is NOT &quot;is it Ok?&quot;</span>
-        <span class="k">pass</span>
+    <span class="nb">bool</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>  <span class="c1"># this is what `if result:` does under the hood</span>
 <span class="k">except</span> <span class="ne">TypeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
     <span class="nb">print</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>  <span class="c1"># Ok and Err have no truth value; use is_ok()/is_err(), ...</span>
 </code></pre></div>
@@ -1080,6 +1093,7 @@ gradual adoption:</p>
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">MissingKey</span><span class="p">:</span>
     <span class="n">key</span><span class="p">:</span> <span class="nb">str</span>
+
 
 <span class="nd">@dataclass</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">InvalidValue</span><span class="p">:</span>
