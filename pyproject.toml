@@ -1,6 +1,6 @@
 [project]
 name = "corrode"
-version = "0.1.2"
+version = "1.0.0"
 description = "A Rust-like Result type for Python"
 readme = "README.md"
 license = "MIT"

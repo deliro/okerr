@@ -5,6 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0](https://github.com/deliro/corrode/compare/v0.1.2...v1.0.0) (2026-08-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* bool(Result) now raises TypeError; as_result/ as_async_result reject BaseException-only types; simultaneous task exceptions arrive as ExceptionGroup (always, even a single one); the private _DoError is renamed to public DoError.
+
+### Features
+
+* strictness guarantees, task-safe async iterators, new API ([a81025f](https://github.com/deliro/corrode/commit/a81025f1cc25e44caa98b37169d3aa104fd4a187))
+
+
+### Bug Fixes
+
+* **docs:** publish versioned docs, repair broken site rendering ([#21](https://github.com/deliro/corrode/issues/21)) ([9ce43be](https://github.com/deliro/corrode/commit/9ce43be13f4f90cc2c67fa0ff0dd2a36b648e0a6))
+
+
+### Documentation
+
+* add acknowledgements ([68bf8b0](https://github.com/deliro/corrode/commit/68bf8b0d5d408acbd32d4a05cfcdb77a69c7db4f))
+* add The Zen of Python quote ([6f3bb5e](https://github.com/deliro/corrode/commit/6f3bb5ebc457b64f96e2b06229bf6c770057b2d6))
+* generated docs site, slimmer README, contributing guide ([5bbbc59](https://github.com/deliro/corrode/commit/5bbbc59a8ab13543e08c808905530be9577afa56))
+* README improved & `do` deprecated ([baef922](https://github.com/deliro/corrode/commit/baef9223318ef9b90f00265898fb5424a92251ac))
+
 ## [0.1.2](https://github.com/deliro/corrode/compare/v0.1.1...v0.1.2) (2026-02-19)
 
 
