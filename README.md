@@ -259,7 +259,7 @@ assert find_product("mate").map(lambda p: p.price).unwrap_or(0) == 0
 
 Also available — see the [API reference](https://deliro.github.io/corrode/latest/api/result/):
 
-- transforms: `map_err`, `map_or`, `map_or_else`
+- transforms: `map_err`, `map_or`, `map_or_else`, `transpose`
 - predicates: `is_ok`, `is_err`, `is_ok_and`, `is_err_and`
 - side effects: `inspect`, `inspect_err`
 - extraction: `ok`, `err`, `ok_value`, `err_value`, `unwrap`, `expect`,

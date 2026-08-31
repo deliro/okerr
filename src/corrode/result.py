@@ -549,6 +549,25 @@ class Ok(Generic[T_co]):
         """
         return self._value
 
+    def transpose(self: Ok[U | None]) -> Ok[U] | None:
+        """
+        Transpose a ``Result`` of an optional value into an optional ``Result``.
+
+        Convert ``Result[U | None, E]`` into ``Result[U, E] | None``:
+        ``None`` if the contained value is ``None``, the ``Ok`` unchanged
+        otherwise. This is the inverse of ``from_optional``.
+
+        Examples:
+            >>> Ok(1).transpose()
+            Ok(1)
+            >>> Ok(None).transpose() is None
+            True
+
+        """
+        if self._value is None:
+            return None
+        return cast("Ok[U]", self)
+
 
 class DoError(Exception):
     """
@@ -1050,6 +1069,19 @@ class Err(Generic[E_co]):
 
         Examples:
             >>> Err("bad").flatten()
+            Err('bad')
+
+        """
+        return self
+
+    def transpose(self) -> Err[E_co]:
+        """
+        Transpose a ``Result`` of an optional value into an optional ``Result``.
+
+        Since this is an ``Err``, there is no value to inspect — ``self`` is returned.
+
+        Examples:
+            >>> Err("bad").transpose()
             Err('bad')
 
         """

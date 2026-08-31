@@ -294,7 +294,7 @@ _iter_mod = iterator
 _async_iter_mod = async_iterator
 
 # ---------------------------------------------------------------------------
-# 16. flatten
+# 16. flatten / transpose
 # ---------------------------------------------------------------------------
 
 
@@ -304,6 +304,14 @@ def make_nested() -> Result[Result[int, str], str]:
 
 _flattened: Result[int, str] = make_nested().flatten()
 _flatten_err: Err[str] = Err("bad").flatten()
+
+
+def make_optional_result() -> Result[int | None, str]:
+    return Ok(1)
+
+
+_transposed: Result[int, str] | None = make_optional_result().transpose()
+_transpose_err: Err[str] = Err("bad").transpose()
 
 # ---------------------------------------------------------------------------
 # 17. from_optional / from_optional_or_else
