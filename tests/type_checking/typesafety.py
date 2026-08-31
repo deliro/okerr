@@ -6,7 +6,8 @@ statically to ensure the corrode public API is correctly typed.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
+from collections.abc import AsyncIterator, Awaitable, Coroutine
+from typing import Any
 
 from corrode import (
     DoError,
@@ -361,3 +362,20 @@ async def _async_iter_examples() -> None:
         fetch,
         concurrency=2,
     )
+
+
+# ---------------------------------------------------------------------------
+# 21. async_iterator: async iterable sources
+# ---------------------------------------------------------------------------
+
+
+async def _async_source_examples() -> None:
+    async def fetch(i: int) -> Result[int, str]:
+        return Ok(i)
+
+    async def source() -> AsyncIterator[Coroutine[Any, Any, Result[int, str]]]:
+        yield fetch(1)
+        yield fetch(2)
+
+    _acollected: Result[list[int], str] = await async_iterator.collect(source(), concurrency=2)
+    _afiltered: list[int] = [v async for v in async_iterator.filter_ok(source(), concurrency=2)]

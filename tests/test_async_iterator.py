@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from typing import TypeVar
+from collections.abc import AsyncIterator, Coroutine
+from typing import Any, TypeVar
 
 import pytest
 
@@ -1134,3 +1135,275 @@ class TestTryReduce:
         result = await try_reduce([int_after(1), remaining], 0, fail)
         assert result == Err("nope: 1")
         assert inspect.getcoroutinestate(remaining) == "CORO_CLOSED"
+
+
+# ---------------------------------------------------------------------------
+# Async iterable sources
+# ---------------------------------------------------------------------------
+
+ResultCoro = Coroutine[Any, Any, Ok[int] | Err[str]]
+IntCoro = Coroutine[Any, Any, int]
+
+
+class TestAsyncIterableSources:
+    async def _slow(self, v: int, cancelled: list[int]) -> Ok[int]:
+        try:
+            await asyncio.sleep(10)
+            return Ok(v)
+        except asyncio.CancelledError:
+            cancelled.append(v)
+            raise
+
+    async def test_collect_all_ok(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            for i in range(5):
+                yield ok_after(i)
+
+        assert await collect(source()) == Ok(list(range(5)))
+
+    async def test_collect_first_err_short_circuits(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield ok_after(1)
+            yield err_after("bad")
+            yield ok_after(3)
+
+        assert await collect(source(), concurrency=1) == Err("bad")
+
+    async def test_collect_err_stops_consuming_source(self) -> None:
+        yielded: list[int] = []
+
+        async def source() -> AsyncIterator[ResultCoro]:
+            for i in range(100):
+                yielded.append(i)
+                if i == 0:
+                    yield err_after("stop")
+                else:
+                    yield ok_after(i, delay=10)
+
+        result = await collect(source(), concurrency=3)
+        assert result == Err("stop")
+        # only the initial window of 3 was ever pulled from the source
+        assert yielded == [0, 1, 2]
+
+    async def test_collect_concurrency_respected(self) -> None:
+        probe = ConcurrencyProbe()
+
+        async def source() -> AsyncIterator[ResultCoro]:
+            for i in range(8):
+                yield probe.track(Ok(i))
+
+        result = await collect(source(), concurrency=3)
+        assert result == Ok(list(range(8)))
+        assert probe.peak <= 3
+
+    async def test_collect_all_accumulates_errors(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield ok_after(1)
+            yield err_after("a")
+            yield err_after("b")
+
+        assert await collect_all(source()) == Err(["a", "b"])
+
+    async def test_collect_all_ok_values(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield ok_after(1)
+            yield ok_after(2)
+
+        assert await collect_all(source()) == Ok([1, 2])
+
+    async def test_partition_mixed(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield ok_after(1)
+            yield err_after("x")
+            yield ok_after(2)
+
+        assert await partition(source()) == ([1, 2], ["x"])
+
+    async def test_map_collect(self) -> None:
+        async def elements() -> AsyncIterator[int]:
+            for i in range(4):
+                yield i
+
+        async def double(x: int) -> Ok[int]:
+            await asyncio.sleep(0)
+            return Ok(x * 2)
+
+        assert await map_collect(elements(), double) == Ok([0, 2, 4, 6])
+
+    async def test_map_collect_err_short_circuits_and_closes_source(self) -> None:
+        consumed: list[int] = []
+        closed = False
+
+        async def elements() -> AsyncIterator[int]:
+            nonlocal closed
+            try:
+                for i in range(100):
+                    consumed.append(i)
+                    yield i
+            finally:
+                closed = True
+
+        async def check(x: int) -> Ok[int] | Err[str]:
+            if x == 0:
+                return Err("zero")
+            await asyncio.sleep(10)
+            return Ok(x)
+
+        result = await map_collect(elements(), check, concurrency=2)
+        assert result == Err("zero")
+        assert consumed == [0, 1]
+        assert closed
+
+    async def test_map_partition(self) -> None:
+        async def elements() -> AsyncIterator[int]:
+            for i in (1, -1, 2):
+                yield i
+
+        async def check(v: int) -> Ok[int] | Err[str]:
+            await asyncio.sleep(0)
+            return Ok(v) if v > 0 else Err(f"bad: {v}")
+
+        assert await map_partition(elements(), check) == ([1, 2], ["bad: -1"])
+
+    async def test_filter_ok_ordered(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield ok_after(1, delay=0.05)
+            yield err_after("x")
+            yield ok_after(2, delay=0.0)
+
+        results = [v async for v in filter_ok(source(), concurrency=3)]
+        assert results == [1, 2]
+
+    async def test_filter_err_ordered(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield err_after("slow", delay=0.05)
+            yield ok_after(1)
+            yield err_after("fast", delay=0.0)
+
+        results = [e async for e in filter_err(source(), concurrency=3)]
+        assert results == ["slow", "fast"]
+
+    async def test_filter_ok_concurrency_respected(self) -> None:
+        probe = ConcurrencyProbe()
+
+        async def source() -> AsyncIterator[ResultCoro]:
+            for i in range(8):
+                yield probe.track(Ok(i))
+
+        async for _ in filter_ok(source(), concurrency=3):
+            pass
+        assert probe.peak <= 3
+
+    async def test_filter_ok_unordered_completion_order(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield ok_after(1, delay=0.05)
+            yield err_after("x")
+            yield ok_after(2, delay=0.0)
+
+        results = [v async for v in filter_ok_unordered(source())]
+        assert results == [2, 1]
+
+    async def test_filter_err_unordered_completion_order(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield err_after("slow", delay=0.05)
+            yield ok_after(1)
+            yield err_after("fast", delay=0.0)
+
+        results = [e async for e in filter_err_unordered(source())]
+        assert results == ["fast", "slow"]
+
+    async def test_filter_ok_break_closes_source_and_cancels_tasks(self) -> None:
+        cancelled: list[int] = []
+        created: list[Coroutine[Any, Any, Ok[int]]] = []
+        closed = False
+
+        async def source() -> AsyncIterator[ResultCoro]:
+            nonlocal closed
+            i = 0
+            try:
+                yield ok_after(0)
+                while True:
+                    i += 1
+                    coro = self._slow(i, cancelled)
+                    created.append(coro)
+                    yield coro
+            finally:
+                closed = True
+
+        agen = filter_ok(source(), concurrency=2)
+        async for _ in agen:
+            break
+        await agen.aclose()
+        assert closed
+        # slow(1) was in flight and got cancelled; slow(2) was pulled during a
+        # refill but never started, so it is closed rather than cancelled
+        assert cancelled == [1]
+        assert [inspect.getcoroutinestate(c) for c in created] == ["CORO_CLOSED", "CORO_CLOSED"]
+        assert len(asyncio.all_tasks()) == 1  # only the test's own task remains
+
+    async def test_raising_source_wraps_in_group_and_cancels(self) -> None:
+        # the source raises during a refill — in-flight tasks are cancelled
+        # and the source's exception joins the group
+        cancelled: list[int] = []
+
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield ok_after(0)
+            yield self._slow(1, cancelled)
+            raise RuntimeError("source broke")
+
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await collect(source(), concurrency=2)
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+        assert cancelled == [1]
+
+    async def test_raising_source_filter_ok_unordered(self) -> None:
+        # the source raises during the initial fill
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield ok_after(1)
+            raise RuntimeError("source broke")
+
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            async for _ in filter_ok_unordered(source()):
+                pass
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+
+    async def test_try_reduce(self) -> None:
+        async def source() -> AsyncIterator[IntCoro]:
+            for i in (1, 2, 3):
+                yield int_after(i)
+
+        def add(acc: int, x: int) -> Ok[int]:
+            return Ok(acc + x)
+
+        assert await try_reduce(source(), 0, add) == Ok(6)
+
+    async def test_try_reduce_short_circuit_closes_source(self) -> None:
+        closed = False
+        pulled: list[int] = []
+
+        async def source() -> AsyncIterator[IntCoro]:
+            nonlocal closed
+            try:
+                for i in (1, -1, 3):
+                    pulled.append(i)
+                    yield int_after(i)
+            finally:
+                closed = True
+
+        def maybe_fail(acc: int, x: int) -> Ok[int] | Err[str]:
+            return Err(f"negative: {x}") if x < 0 else Ok(acc + x)
+
+        assert await try_reduce(source(), 0, maybe_fail) == Err("negative: -1")
+        assert pulled == [1, -1]
+        assert closed
+
+    async def test_try_reduce_source_exception_propagates_bare(self) -> None:
+        async def source() -> AsyncIterator[IntCoro]:
+            yield int_after(1)
+            raise RuntimeError("source broke")
+
+        def add(acc: int, x: int) -> Ok[int]:
+            return Ok(acc + x)
+
+        with pytest.raises(RuntimeError, match="source broke"):
+            await try_reduce(source(), 0, add)

@@ -355,7 +355,10 @@ assert partition([parse("1"), parse("x"), parse("2")]) == ([1, 2], ["not a numbe
 | `try_reduce`                               | sequential fold, short-circuit on `Err`                        |
 
 Every function accepts `concurrency` to bound how many tasks run at once
-(`None` = unlimited). All of them clean up after themselves: cancelling the
+(`None` = unlimited). Every function also takes either a plain iterable or an
+async iterable of awaitables (e.g. an async generator over a paginated API) —
+async sources are consumed lazily and closed on exit. All of them clean up
+after themselves: cancelling the
 caller, breaking out of an `async for`, or an exception in any task cancels
 all in-flight tasks and closes unconsumed coroutines — nothing keeps running
 in the background.
