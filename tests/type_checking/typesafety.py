@@ -416,3 +416,25 @@ async def _async_zip_examples() -> None:
             _az_values: tuple[int, float] = pair
         case Err(error):
             _az_error: str | ValueError = error
+
+
+# ---------------------------------------------------------------------------
+# 23. iterator / async_iterator: first_ok
+# ---------------------------------------------------------------------------
+
+_first_ok_sync: Result[int, list[str]] = iterator.first_ok([make_ok(), make_err()])
+
+
+async def _first_ok_examples() -> None:
+    async def fetch(i: int) -> Result[int, str]:
+        return Ok(i)
+
+    # plain iterable of awaitables
+    _afo: Result[int, list[str]] = await async_iterator.first_ok([fetch(1), fetch(2)])
+
+    # async-generator source
+    async def source() -> AsyncIterator[Coroutine[Any, Any, Result[int, str]]]:
+        yield fetch(1)
+        yield fetch(2)
+
+    _afo_src: Result[int, list[str]] = await async_iterator.first_ok(source(), concurrency=2)

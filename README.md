@@ -309,6 +309,7 @@ The same principle elsewhere:
 | --------------- | ------------------------------------------------------------------ |
 | `collect`       | all values, or the **first** error (short-circuits)                |
 | `collect_all`   | all values, or **all** errors (never short-circuits)               |
+| `first_ok`      | the **first** value, or **all** errors (short-circuits on success) |
 | `map_collect`   | `collect` with the mapping inline                                  |
 | `partition`     | split into `(oks, errs)`, keep both sides                          |
 | `map_partition` | `partition` with the mapping inline                                |
@@ -348,6 +349,7 @@ assert partition([parse("1"), parse("x"), parse("2")]) == ([1, 2], ["not a numbe
 | ------------------------------------------ | -------------------------------------------------------------- |
 | `collect`                                  | input order; first `Err` cancels the rest                      |
 | `collect_all`                              | input order; all values or **all** errors, runs everything     |
+| `first_ok`                                 | race: first `Ok` to complete wins and cancels the rest, or all errors in input order |
 | `map_collect` / `map_partition`            | `collect` / `partition` with the mapping inline                |
 | `partition`                                | input order; `(oks, errs)`, runs everything                    |
 | `filter_ok_unordered` / `filter_err_unordered` | yield in **completion** order, skip the other side         |

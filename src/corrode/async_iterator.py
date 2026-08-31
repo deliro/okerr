@@ -573,6 +573,112 @@ async def collect_all(
     return Ok(oks)
 
 
+async def first_ok(
+    iterable: Iterable[_CoroOrTask[Result[T, E]]] | AsyncIterable[_CoroOrTask[Result[T, E]]],
+    *,
+    concurrency: int | None = None,
+) -> Result[T, list[E]]:
+    """
+    Race coroutines or tasks concurrently, returning the first ``Ok`` to complete.
+
+    The dual of ``collect``: ``collect`` is all values or the first error,
+    ``first_ok`` is the first value or all errors. Use it to try alternative
+    sources concurrently and take whichever succeeds first.
+
+    Accepts a plain iterable or an async iterable (e.g. an async generator)
+    of awaitables — async sources are consumed lazily and closed on exit.
+
+    The first ``Ok`` to complete wins: remaining in-flight tasks are cancelled
+    and unconsumed items are closed — slower alternatives are not awaited once
+    one has succeeded. An early ``Err`` does not end the race: it is recorded
+    and the race continues. If every awaitable completes with ``Err``, returns
+    ``Err`` of every error in input order (not completion order); empty input
+    gives ``Err([])``.
+
+    *concurrency* limits how many run at the same time.
+    ``None`` means unlimited — all are scheduled at once.
+
+    **Exceptions**: if any coroutine raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
+    A raising source follows the same contract: in-flight tasks are cancelled
+    and the source's exception joins the group.
+    A raise wins over the race even while other alternatives are still running:
+    it is a bug or an infrastructure failure, not a candidate loser — it is
+    never swallowed on the chance that another branch might still succeed.
+
+    Examples:
+        >>> import asyncio
+        >>> async def source(name: str, delay: float, ok: bool) -> Result[str, str]:
+        ...     await asyncio.sleep(delay)
+        ...     return Ok(name) if ok else Err(f"{name} failed")
+
+        A fast ``Err`` does not end the race — the slower ``Ok`` still wins:
+
+        >>> asyncio.run(
+        ...     first_ok(
+        ...         [
+        ...             source("mirror", 0.0, ok=False),
+        ...             source("primary", 0.01, ok=True),
+        ...         ],
+        ...     ),
+        ... )
+        Ok('primary')
+
+        When every alternative fails, the errors arrive in input order,
+        regardless of completion order:
+
+        >>> asyncio.run(
+        ...     first_ok(
+        ...         [
+        ...             source("primary", 0.01, ok=False),
+        ...             source("mirror", 0.0, ok=False),
+        ...         ],
+        ...     ),
+        ... )
+        Err(['primary failed', 'mirror failed'])
+
+    """
+    src: _Source[Result[T, E]] = _Source(iterable)
+    pending: set[asyncio.Task[tuple[int, Result[T, E]]]] = set()
+    indexed: dict[int, E] = {}
+
+    try:
+        next_idx = await _fill_indexed(pending, src, concurrency)
+        while pending:
+            done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            batch, excs = _split_done(done)
+            if excs:
+                excs.extend(await _drain(pending, src))
+                pending = set()
+                raise BaseExceptionGroup(_GROUP_MSG, excs)
+            batch.sort(key=operator.itemgetter(0))
+            # The race is won by any Ok in the batch — check before recording
+            # errors or refilling, so no item is pulled after the win.
+            for _idx, result in batch:
+                match result:
+                    case Ok():
+                        return result
+                    case Err():
+                        pass
+            for idx, result in batch:
+                match result:
+                    case Err(e):
+                        indexed[idx] = e
+                        next_item = await _pull(src, pending)
+                        if next_item is not None:
+                            pending.add(_wrap_indexed(next_idx, next_item))
+                            next_idx += 1
+                    case Ok():  # pragma: no cover — handled by the loop above
+                        pass
+    finally:
+        await _cancel_all(pending, src)
+
+    return Err([indexed[i] for i in range(len(indexed))])
+
+
 async def filter_ok_unordered(
     iterable: Iterable[_CoroOrTask[Result[T, E]]] | AsyncIterable[_CoroOrTask[Result[T, E]]],
     *,

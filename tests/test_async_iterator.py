@@ -15,6 +15,7 @@ from corrode.async_iterator import (
     filter_err_unordered,
     filter_ok,
     filter_ok_unordered,
+    first_ok,
     map_collect,
     map_partition,
     partition,
@@ -1091,6 +1092,114 @@ class TestCollectAll:
         probe = ConcurrencyProbe()
         await collect_all([probe.track(Ok(i)) for i in range(8)], concurrency=3)
         assert probe.peak <= 3
+
+
+# ---------------------------------------------------------------------------
+# first_ok
+# ---------------------------------------------------------------------------
+
+
+class TestFirstOk:
+    async def test_empty(self) -> None:
+        assert await first_ok([]) == Err([])
+
+    async def test_first_ok_to_complete_wins(self) -> None:
+        # completion order is inverted: the slow first element loses the race
+        result = await first_ok([ok_after(1, delay=0.1), ok_after(2, delay=0.0)])
+        assert result == Ok(2)
+
+    async def test_early_err_does_not_end_the_race(self) -> None:
+        # the fast Err completes first, but the slow Ok still wins
+        result = await first_ok([err_after("fast", delay=0.0), ok_after(1, delay=0.05)])
+        assert result == Ok(1)
+
+    async def test_all_err_gives_input_order(self) -> None:
+        # completion order is shuffled, but the errors follow input order
+        result = await first_ok(
+            [
+                err_after("a", delay=0.05),
+                err_after("b", delay=0.0),
+                err_after("c", delay=0.02),
+            ],
+        )
+        assert result == Err(["a", "b", "c"])
+
+    async def test_winner_cancels_losers(self) -> None:
+        cancelled: list[int] = []
+
+        async def slow_ok(v: int) -> Ok[int]:
+            try:
+                await asyncio.sleep(10)
+                return Ok(v)
+            except asyncio.CancelledError:
+                cancelled.append(v)
+                raise
+
+        result = await first_ok([slow_ok(1), ok_after(0, delay=0.0), slow_ok(2)])
+        assert result == Ok(0)
+        assert sorted(cancelled) == [1, 2]
+
+    async def test_concurrency_respected(self) -> None:
+        probe = ConcurrencyProbe()
+        # all Err so the race is never won early and every item runs
+        result = await first_ok([probe.track(Err(i)) for i in range(8)], concurrency=3)
+        assert result == Err(list(range(8)))
+        assert probe.peak <= 3
+
+    async def test_early_ok_stops_consuming_source(self) -> None:
+        pulled: list[int] = []
+
+        async def source() -> AsyncIterator[ResultCoro]:
+            for i in range(100):
+                pulled.append(i)
+                if i == 0:
+                    yield ok_after(0)
+                else:
+                    yield ok_after(i, delay=10)
+
+        result = await first_ok(source(), concurrency=3)
+        assert result == Ok(0)
+        # only the initial window of 3 was ever pulled from the source
+        assert pulled == [0, 1, 2]
+
+    async def test_async_generator_source_closed_on_early_win(self) -> None:
+        closed = False
+
+        async def source() -> AsyncIterator[ResultCoro]:
+            nonlocal closed
+            try:
+                yield ok_after(0)
+                yield ok_after(1, delay=10)
+                yield ok_after(2, delay=10)
+            finally:
+                closed = True
+
+        result = await first_ok(source(), concurrency=2)
+        assert result == Ok(0)
+        assert closed
+
+    async def test_exception_wins_over_the_race_as_group_of_one(self) -> None:
+        # a raise is not a candidate loser: it cancels the race even though
+        # a slow alternative might still have succeeded
+        cancelled: list[int] = []
+
+        async def slow_ok(v: int) -> Ok[int]:
+            try:
+                await asyncio.sleep(10)
+                return Ok(v)
+            except asyncio.CancelledError:
+                cancelled.append(v)
+                raise
+
+        async def boom() -> Ok[int]:
+            raise ValueError("oops")
+
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await first_ok([slow_ok(1), boom()])
+
+        assert exc_info.group_contains(ValueError, match="oops")
+        assert len(exc_info.value.exceptions) == 1
+        assert cancelled == [1]
 
 
 # ---------------------------------------------------------------------------

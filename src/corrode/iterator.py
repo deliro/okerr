@@ -60,6 +60,38 @@ def collect_all(iterable: Iterable[Result[T, E]]) -> Result[list[T], list[E]]:
     return Ok(oks)
 
 
+def first_ok(iterable: Iterable[Result[T, E]]) -> Result[T, list[E]]:
+    """
+    Return the first ``Ok`` encountered, short-circuiting the iteration.
+
+    The dual of ``collect``: ``collect`` is all values or the first error,
+    ``first_ok`` is the first value or all errors. Use it to try alternative
+    sources until one succeeds.
+
+    Iteration stops at the first ``Ok``, so later elements of a generator are
+    never produced — this matters when producing a ``Result`` is expensive.
+    If no ``Ok`` is found, returns ``Err`` of every error in input order;
+    an empty iterable gives ``Err([])``.
+
+    Examples:
+        >>> first_ok([Err("a"), Ok(2), Ok(3)])
+        Ok(2)
+        >>> first_ok([Err("a"), Err("b")])
+        Err(['a', 'b'])
+        >>> first_ok([])
+        Err([])
+
+    """
+    errs: list[E] = []
+    for result in iterable:
+        match result:
+            case Ok():
+                return result
+            case Err(e):
+                errs.append(e)
+    return Err(errs)
+
+
 def map_collect(
     iterable: Iterable[T],
     f: Callable[[T], Result[U, E]],
