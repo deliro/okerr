@@ -12,13 +12,19 @@ from collections.abc import (
     Iterable,
     Iterator,
 )
-from typing import Generic, TypeVar
+from typing import Any, Generic, TypeVar, overload
 
 from .result import Err, Ok, Result
 
 T = TypeVar("T")
 U = TypeVar("U")
 E = TypeVar("E")
+
+T1 = TypeVar("T1")
+T2 = TypeVar("T2")
+T3 = TypeVar("T3")
+T4 = TypeVar("T4")
+T5 = TypeVar("T5")
 
 _R = TypeVar("_R")
 _S = TypeVar("_S")
@@ -300,6 +306,86 @@ async def collect(
         await _cancel_all(pending, src)
 
     return Ok([indexed[i] for i in range(len(indexed))])
+
+
+@overload
+async def zip(  # noqa: A001 — intentional builtin shadow, mirrors Result.zip
+    r1: _CoroOrTask[Result[T1, E]],
+    r2: _CoroOrTask[Result[T2, E]],
+    /,
+) -> Result[tuple[T1, T2], E]: ...
+
+
+@overload
+async def zip(  # noqa: A001 — intentional builtin shadow, mirrors Result.zip
+    r1: _CoroOrTask[Result[T1, E]],
+    r2: _CoroOrTask[Result[T2, E]],
+    r3: _CoroOrTask[Result[T3, E]],
+    /,
+) -> Result[tuple[T1, T2, T3], E]: ...
+
+
+@overload
+async def zip(  # noqa: A001 — intentional builtin shadow, mirrors Result.zip
+    r1: _CoroOrTask[Result[T1, E]],
+    r2: _CoroOrTask[Result[T2, E]],
+    r3: _CoroOrTask[Result[T3, E]],
+    r4: _CoroOrTask[Result[T4, E]],
+    /,
+) -> Result[tuple[T1, T2, T3, T4], E]: ...
+
+
+@overload
+async def zip(  # noqa: A001 — intentional builtin shadow, mirrors Result.zip
+    r1: _CoroOrTask[Result[T1, E]],
+    r2: _CoroOrTask[Result[T2, E]],
+    r3: _CoroOrTask[Result[T3, E]],
+    r4: _CoroOrTask[Result[T4, E]],
+    r5: _CoroOrTask[Result[T5, E]],
+    /,
+) -> Result[tuple[T1, T2, T3, T4, T5], E]: ...
+
+
+async def zip(  # noqa: A001 — intentional builtin shadow, mirrors Result.zip
+    *results: _CoroOrTask[Result[Any, Any]],
+) -> Result[tuple[Any, ...], Any]:
+    """
+    Await two to five coroutines or tasks concurrently, zipping values into ``Ok[tuple]``.
+
+    The heterogeneous sibling of ``collect`` and the async counterpart of
+    ``Result.zip``: each awaitable may produce a different ``Ok`` type, and
+    the values are combined into a single tuple.
+
+    Values are returned in argument order, regardless of completion order.
+    Returns the first ``Err`` to complete, cancelling the remaining awaitables.
+
+    All awaitables are scheduled at once — there is no concurrency limit.
+
+    **Exceptions**: if any coroutine raises, all remaining tasks are cancelled and
+    every exception — including any raised while those tasks were being cancelled —
+    propagates as a single ``ExceptionGroup``, even when only one task failed.
+    One failure is a group of one: the exception type you catch never depends
+    on timing. Handle with ``except*``.
+
+    Examples:
+        >>> import asyncio
+        >>> async def fetch_name() -> Result[str, str]:
+        ...     return Ok("alice")
+        >>> async def fetch_age() -> Result[int, str]:
+        ...     return Ok(30)
+        >>> asyncio.run(zip(fetch_name(), fetch_age()))
+        Ok(('alice', 30))
+
+        The first ``Err`` to complete wins and the rest are cancelled:
+
+        >>> async def broken() -> Result[int, str]:
+        ...     return Err("bad")
+        >>> asyncio.run(zip(fetch_name(), broken()))
+        Err('bad')
+
+    """
+    collected = await collect(results)
+    return collected.map(tuple)
 
 
 async def map_collect(

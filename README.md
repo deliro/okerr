@@ -353,9 +353,10 @@ assert partition([parse("1"), parse("x"), parse("2")]) == ([1, 2], ["not a numbe
 | `filter_ok_unordered` / `filter_err_unordered` | yield in **completion** order, skip the other side         |
 | `filter_ok` / `filter_err`                 | yield in **input** order (explicit `concurrency` required)     |
 | `try_reduce`                               | sequential fold, short-circuit on `Err`                        |
+| `zip`                                      | `Result.zip` for 2–5 awaitables: all values as a tuple, or the first `Err` cancels the rest |
 
-Every function accepts `concurrency` to bound how many tasks run at once
-(`None` = unlimited). Every function also takes either a plain iterable or an
+Every iterable-taking function accepts `concurrency` to bound how many tasks run at once
+(`None` = unlimited). Each also takes either a plain iterable or an
 async iterable of awaitables (e.g. an async generator over a paginated API) —
 async sources are consumed lazily and closed on exit. All of them clean up
 after themselves: cancelling the

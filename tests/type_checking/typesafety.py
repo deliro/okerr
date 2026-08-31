@@ -379,3 +379,40 @@ async def _async_source_examples() -> None:
 
     _acollected: Result[list[int], str] = await async_iterator.collect(source(), concurrency=2)
     _afiltered: list[int] = [v async for v in async_iterator.filter_ok(source(), concurrency=2)]
+
+
+# ---------------------------------------------------------------------------
+# 22. async_iterator: zip
+# ---------------------------------------------------------------------------
+
+
+async def _async_zip_examples() -> None:
+    async def fetch_int() -> Result[int, str]:
+        return Ok(1)
+
+    async def fetch_str() -> Result[str, str]:
+        return Ok("a")
+
+    async def fetch_float() -> Result[float, ValueError]:
+        return Ok(3.0)
+
+    # heterogeneous value types infer the right tuple
+    _az2: Result[tuple[int, str], str] = await async_iterator.zip(fetch_int(), fetch_str())
+    _az5: Result[tuple[int, str, int, str, int], str] = await async_iterator.zip(
+        fetch_int(),
+        fetch_str(),
+        fetch_int(),
+        fetch_str(),
+        fetch_int(),
+    )
+
+    # heterogeneous error types produce a usable union
+    _az_mixed_err: Result[tuple[int, float], str | ValueError] = await async_iterator.zip(
+        fetch_int(),
+        fetch_float(),
+    )
+    match _az_mixed_err:
+        case Ok(pair):
+            _az_values: tuple[int, float] = pair
+        case Err(error):
+            _az_error: str | ValueError = error

@@ -7,7 +7,7 @@ from typing import Any, TypeVar
 
 import pytest
 
-from corrode import Err, Ok
+from corrode import Err, Ok, async_iterator
 from corrode.async_iterator import (
     collect,
     collect_all,
@@ -451,6 +451,99 @@ class TestCreateTaskInputs:
         task = asyncio.create_task(ok_after(1))
         result = await collect([ok_after(0), task, ok_after(2)])
         assert result == Ok([0, 1, 2])
+
+
+# ---------------------------------------------------------------------------
+# zip
+# ---------------------------------------------------------------------------
+
+
+async def str_after(value: str, delay: float = 0.0) -> Ok[str]:
+    await asyncio.sleep(delay)
+    return Ok(value)
+
+
+class TestZip:
+    async def test_all_ok_arity_2(self) -> None:
+        result = await async_iterator.zip(ok_after(1), str_after("a"))
+        assert result == Ok((1, "a"))
+
+    async def test_all_ok_arity_5(self) -> None:
+        result = await async_iterator.zip(
+            ok_after(1),
+            str_after("b"),
+            ok_after(3),
+            str_after("d"),
+            ok_after(5),
+        )
+        assert result == Ok((1, "b", 3, "d", 5))
+
+    async def test_argument_order_regardless_of_completion_order(self) -> None:
+        # the second awaitable completes first, but the tuple follows argument order
+        result = await async_iterator.zip(
+            ok_after(1, delay=0.1),
+            str_after("a", delay=0.0),
+            ok_after(3, delay=0.05),
+        )
+        assert result == Ok((1, "a", 3))
+
+    async def test_first_completing_err_wins(self) -> None:
+        result = await async_iterator.zip(
+            err_after("slow", delay=0.1),
+            err_after("fast", delay=0.0),
+        )
+        assert result == Err("fast")
+
+    async def test_err_cancels_remaining(self) -> None:
+        cancelled: list[int] = []
+
+        async def slow_ok(v: int) -> Ok[int]:
+            try:
+                await asyncio.sleep(10)
+                return Ok(v)
+            except asyncio.CancelledError:
+                cancelled.append(v)
+                raise
+
+        result = await async_iterator.zip(
+            slow_ok(1),
+            err_after("boom", delay=0.0),
+            slow_ok(2),
+        )
+        assert result == Err("boom")
+        assert sorted(cancelled) == [1, 2]
+
+    async def test_exception_raises_group_and_cancels_rest(self) -> None:
+        cancelled: list[int] = []
+
+        async def slow(v: int) -> Ok[int]:
+            try:
+                await asyncio.sleep(10)
+                return Ok(v)
+            except asyncio.CancelledError:
+                cancelled.append(v)
+                raise
+
+        async def boom() -> Ok[int]:
+            raise ValueError("oops")
+
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await async_iterator.zip(slow(1), boom())
+
+        assert exc_info.group_contains(ValueError, match="oops")
+        assert len(exc_info.value.exceptions) == 1
+        assert cancelled == [1]
+
+    async def test_works_with_tasks(self) -> None:
+        task_a = asyncio.create_task(ok_after(1))
+        task_b = asyncio.create_task(str_after("a"))
+        result = await async_iterator.zip(task_a, task_b)
+        assert result == Ok((1, "a"))
+
+    async def test_mixed_coros_and_tasks(self) -> None:
+        task = asyncio.create_task(str_after("a"))
+        result = await async_iterator.zip(ok_after(1), task, ok_after(3))
+        assert result == Ok((1, "a", 3))
 
 
 # ---------------------------------------------------------------------------
