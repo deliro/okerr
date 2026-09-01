@@ -6,6 +6,7 @@ from corrode.iterator import (
     collect_all,
     filter_err,
     filter_ok,
+    first_ok,
     map_collect,
     map_partition,
     partition,
@@ -116,6 +117,41 @@ class TestCollectAll:
     def test_ok_values_dropped_on_error(self) -> None:
         # all-or-nothing: Ok values are not observable when any Err is present
         assert collect_all([Ok(1), Err("a")]) == Err(["a"])
+
+
+# ---------------------------------------------------------------------------
+# first_ok
+# ---------------------------------------------------------------------------
+
+
+class TestFirstOk:
+    def test_first_ok_wins(self) -> None:
+        assert first_ok([Ok(1), Ok(2), Ok(3)]) == Ok(1)
+
+    def test_short_circuits_on_first_ok(self) -> None:
+        produced = 0
+
+        def counted_iter():
+            nonlocal produced
+            for r in [Err("a"), Ok(2), Ok(3)]:
+                produced += 1
+                yield r
+
+        result = first_ok(counted_iter())
+        assert result == Ok(2)
+        assert produced == 2  # stopped after the Ok
+
+    def test_earlier_errs_skipped(self) -> None:
+        assert first_ok([Err("a"), Err("b"), Ok(3), Err("c")]) == Ok(3)
+
+    def test_all_err_gives_input_order(self) -> None:
+        assert first_ok([Err("a"), Err("b"), Err("c")]) == Err(["a", "b", "c"])
+
+    def test_empty(self) -> None:
+        assert first_ok([]) == Err([])
+
+    def test_generator_input(self) -> None:
+        assert first_ok(Err(str(x)) for x in range(3)) == Err(["0", "1", "2"])
 
 
 # ---------------------------------------------------------------------------

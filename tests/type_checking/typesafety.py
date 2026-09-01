@@ -6,7 +6,8 @@ statically to ensure the corrode public API is correctly typed.
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
+from collections.abc import AsyncIterator, Awaitable, Coroutine
+from typing import Any
 
 from corrode import (
     DoError,
@@ -294,7 +295,7 @@ _iter_mod = iterator
 _async_iter_mod = async_iterator
 
 # ---------------------------------------------------------------------------
-# 16. flatten
+# 16. flatten / transpose
 # ---------------------------------------------------------------------------
 
 
@@ -304,6 +305,14 @@ def make_nested() -> Result[Result[int, str], str]:
 
 _flattened: Result[int, str] = make_nested().flatten()
 _flatten_err: Err[str] = Err("bad").flatten()
+
+
+def make_optional_result() -> Result[int | None, str]:
+    return Ok(1)
+
+
+_transposed: Result[int, str] | None = make_optional_result().transpose()
+_transpose_err: Err[str] = Err("bad").transpose()
 
 # ---------------------------------------------------------------------------
 # 17. from_optional / from_optional_or_else
@@ -353,3 +362,79 @@ async def _async_iter_examples() -> None:
         fetch,
         concurrency=2,
     )
+
+
+# ---------------------------------------------------------------------------
+# 21. async_iterator: async iterable sources
+# ---------------------------------------------------------------------------
+
+
+async def _async_source_examples() -> None:
+    async def fetch(i: int) -> Result[int, str]:
+        return Ok(i)
+
+    async def source() -> AsyncIterator[Coroutine[Any, Any, Result[int, str]]]:
+        yield fetch(1)
+        yield fetch(2)
+
+    _acollected: Result[list[int], str] = await async_iterator.collect(source(), concurrency=2)
+    _afiltered: list[int] = [v async for v in async_iterator.filter_ok(source(), concurrency=2)]
+
+
+# ---------------------------------------------------------------------------
+# 22. async_iterator: zip
+# ---------------------------------------------------------------------------
+
+
+async def _async_zip_examples() -> None:
+    async def fetch_int() -> Result[int, str]:
+        return Ok(1)
+
+    async def fetch_str() -> Result[str, str]:
+        return Ok("a")
+
+    async def fetch_float() -> Result[float, ValueError]:
+        return Ok(3.0)
+
+    # heterogeneous value types infer the right tuple
+    _az2: Result[tuple[int, str], str] = await async_iterator.zip(fetch_int(), fetch_str())
+    _az5: Result[tuple[int, str, int, str, int], str] = await async_iterator.zip(
+        fetch_int(),
+        fetch_str(),
+        fetch_int(),
+        fetch_str(),
+        fetch_int(),
+    )
+
+    # heterogeneous error types produce a usable union
+    _az_mixed_err: Result[tuple[int, float], str | ValueError] = await async_iterator.zip(
+        fetch_int(),
+        fetch_float(),
+    )
+    match _az_mixed_err:
+        case Ok(pair):
+            _az_values: tuple[int, float] = pair
+        case Err(error):
+            _az_error: str | ValueError = error
+
+
+# ---------------------------------------------------------------------------
+# 23. iterator / async_iterator: first_ok
+# ---------------------------------------------------------------------------
+
+_first_ok_sync: Result[int, list[str]] = iterator.first_ok([make_ok(), make_err()])
+
+
+async def _first_ok_examples() -> None:
+    async def fetch(i: int) -> Result[int, str]:
+        return Ok(i)
+
+    # plain iterable of awaitables
+    _afo: Result[int, list[str]] = await async_iterator.first_ok([fetch(1), fetch(2)])
+
+    # async-generator source
+    async def source() -> AsyncIterator[Coroutine[Any, Any, Result[int, str]]]:
+        yield fetch(1)
+        yield fetch(2)
+
+    _afo_src: Result[int, list[str]] = await async_iterator.first_ok(source(), concurrency=2)

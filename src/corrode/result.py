@@ -67,7 +67,11 @@ class Ok(Generic[T_co]):
         msg = "Ok is immutable"
         raise AttributeError(msg)
 
-    def __reduce__(self) -> tuple[Callable[[T_co], Ok[T_co]], tuple[T_co]]:
+    # ty: covariant T_co in the constructor callable is safe: pickle only ever
+    # round-trips the instance's own value, never substitutes a supertype.
+    def __reduce__(
+        self,
+    ) -> tuple[Callable[[T_co], Ok[T_co]], tuple[T_co]]:  # ty: ignore[invalid-generic-class]
         return (Ok, (self._value,))
 
     def __repr__(self) -> str:
@@ -549,6 +553,30 @@ class Ok(Generic[T_co]):
         """
         return self._value
 
+    def transpose(self: Ok[U | None]) -> Ok[U] | None:
+        """
+        Transpose a ``Result`` of an optional value into an optional ``Result``.
+
+        Convert ``Result[U | None, E]`` into ``Result[U, E] | None``:
+        ``None`` if the contained value is ``None``, the ``Ok`` unchanged
+        otherwise. This is the inverse of ``from_optional``.
+
+        Use it for a lookup that can both fail and legitimately find nothing:
+        moving the "nothing" out of the ``Result`` keeps "no such row" a
+        branch of its own instead of an ``Ok(None)`` that every caller
+        downstream has to remember to check.
+
+        Examples:
+            >>> Ok(1).transpose()
+            Ok(1)
+            >>> Ok(None).transpose() is None
+            True
+
+        """
+        if self._value is None:
+            return None
+        return cast("Ok[U]", self)
+
 
 class DoError(Exception):
     """
@@ -605,7 +633,11 @@ class Err(Generic[E_co]):
         msg = "Err is immutable"
         raise AttributeError(msg)
 
-    def __reduce__(self) -> tuple[Callable[[E_co], Err[E_co]], tuple[E_co]]:
+    # ty: covariant E_co in the constructor callable is safe: pickle only ever
+    # round-trips the instance's own value, never substitutes a supertype.
+    def __reduce__(
+        self,
+    ) -> tuple[Callable[[E_co], Err[E_co]], tuple[E_co]]:  # ty: ignore[invalid-generic-class]
         return (Err, (self._value,))
 
     def __repr__(self) -> str:
@@ -1050,6 +1082,19 @@ class Err(Generic[E_co]):
 
         Examples:
             >>> Err("bad").flatten()
+            Err('bad')
+
+        """
+        return self
+
+    def transpose(self) -> Err[E_co]:
+        """
+        Transpose a ``Result`` of an optional value into an optional ``Result``.
+
+        Since this is an ``Err``, there is no value to inspect — ``self`` is returned.
+
+        Examples:
+            >>> Err("bad").transpose()
             Err('bad')
 
         """

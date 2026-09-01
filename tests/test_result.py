@@ -827,6 +827,26 @@ class TestFlatten:
 
 
 # ---------------------------------------------------------------------------
+# transpose
+# ---------------------------------------------------------------------------
+
+
+class TestTranspose:
+    def test_ok_of_none(self) -> None:
+        assert Ok(None).transpose() is None
+
+    def test_ok_of_value(self) -> None:
+        assert Ok(1).transpose() == Ok(1)
+
+    def test_err(self) -> None:
+        assert Err("bad").transpose() == Err("bad")
+
+    def test_ok_of_value_preserves_equality(self) -> None:
+        ok: Ok[int | None] = Ok(42)
+        assert ok.transpose() == ok
+
+
+# ---------------------------------------------------------------------------
 # from_optional / from_optional_or_else
 # ---------------------------------------------------------------------------
 
