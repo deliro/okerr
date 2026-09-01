@@ -12,7 +12,8 @@ from collections.abc import (
     Iterable,
     Iterator,
 )
-from typing import Any, Generic, TypeVar, overload
+from functools import partial
+from typing import Any, Generic, NoReturn, TypeVar, overload
 
 from .result import Err, Ok, Result
 
@@ -34,49 +35,71 @@ _CoroOrTask = Coroutine[object, object, _R] | asyncio.Task[_R]
 _GROUP_MSG = "one or more awaitables raised exceptions"
 
 
+def _finalize_item(item: _CoroOrTask[_R]) -> BaseException | None:
+    """
+    Cancel *item* if it is a task, close it if it is an unstarted coroutine.
+
+    A raising teardown is returned rather than raised so each caller decides
+    its fate: ``_Source.aclose`` collects it into the propagating group,
+    while ``_wrap_indexed``'s done-callback re-raises it to the event loop's
+    exception handler.
+    """
+    try:
+        if isinstance(item, asyncio.Task):
+            item.cancel()
+        else:
+            item.close()
+    except BaseException as exc:  # noqa: BLE001 — the caller decides how to surface it
+        return exc
+    return None
+
+
 class _Source(Generic[_R]):
     """
     Uniform lazy pull interface over a sync or async source of awaitables.
+
+    Sync-vs-async is resolved once, at construction: for a sync source
+    ``sync_next`` is a plain callable that pulls without awaiting — the hot
+    paths call it directly, paying neither an ``isinstance`` check nor a
+    coroutine frame per item — while for an async source it is ``None`` and
+    items come from ``next_item``.
 
     ``aclose`` finalizes whatever the source still holds: unconsumed sync
     items are closed (or cancelled, for tasks) and an async-generator source
     is closed with ``aclose()`` so its finalizers run deterministically.
     """
 
-    _it: Iterator[_CoroOrTask[_R]] | AsyncIterator[_CoroOrTask[_R]]
+    _it: Iterator[_CoroOrTask[_R]]
+    _ait: AsyncIterator[_CoroOrTask[_R]]
+    sync_next: Callable[[], _CoroOrTask[_R] | None] | None
 
     def __init__(
         self,
         iterable: Iterable[_CoroOrTask[_R]] | AsyncIterable[_CoroOrTask[_R]],
     ) -> None:
         if isinstance(iterable, AsyncIterable):
-            self._it = aiter(iterable)
+            self._ait = aiter(iterable)
+            self.sync_next = None
         else:
             self._it = iter(iterable)
+            self.sync_next = partial(next, self._it, None)
 
     async def next_item(self) -> _CoroOrTask[_R] | None:
-        """Pull the next item, or ``None`` once the source is exhausted."""
-        if isinstance(self._it, AsyncIterator):
-            try:
-                return await anext(self._it)
-            except StopAsyncIteration:
-                return None
-        return next(self._it, None)
+        """
+        Pull the next item from an async source, or ``None`` once exhausted.
+
+        Sync sources are served by ``sync_next`` instead, which never awaits.
+        """
+        try:
+            return await anext(self._ait)
+        except StopAsyncIteration:
+            return None
 
     async def aclose(self) -> list[BaseException]:
         """Finalize the source, returning non-cancellation teardown exceptions."""
-        if not isinstance(self._it, AsyncIterator):
-            excs: list[BaseException] = []
-            for item in self._it:
-                try:
-                    if isinstance(item, asyncio.Task):
-                        item.cancel()
-                    else:
-                        item.close()
-                except BaseException as exc:  # noqa: BLE001 — collected by the caller
-                    excs.append(exc)
-            return excs
-        aclose = getattr(self._it, "aclose", None)
+        if self.sync_next is not None:
+            return [exc for item in self._it if (exc := _finalize_item(item)) is not None]
+        aclose = getattr(self._ait, "aclose", None)
         if aclose is None:
             return []
         try:
@@ -119,24 +142,59 @@ async def _cancel_all(
     await _drain(pending, src)
 
 
+async def _fail(
+    exc: BaseException,
+    src: _Source[_R],
+    pending: set[asyncio.Task[_S]],
+) -> NoReturn:
+    """
+    Cancel *pending*, finalize *src*, re-raise *exc* inside an ``ExceptionGroup``.
+
+    A raising source is an infrastructure failure: everything — including any
+    exception raised during the teardown — propagates as a single group, the
+    same contract a raising task follows. Cancellation is not a source
+    failure and passes through bare.
+    """
+    if isinstance(exc, asyncio.CancelledError):
+        raise exc
+    excs = [exc, *await _drain(pending, src)]
+    raise BaseExceptionGroup(_GROUP_MSG, excs) from None
+
+
 async def _pull(
     src: _Source[_R],
     pending: set[asyncio.Task[_S]],
 ) -> _CoroOrTask[_R] | None:
     """
-    Pull the next item from *src*, or ``None`` once it is exhausted.
+    Pull the next item from an async *src*, or ``None`` once it is exhausted.
 
-    A raising source is an infrastructure failure: cancel *pending*, finalize
-    the source, and propagate everything as a single ``ExceptionGroup`` — the
-    same contract a raising task follows.
+    A raising source cancels *pending*, finalizes the source, and propagates
+    everything as a single ``ExceptionGroup`` (see ``_fail``). Sync sources
+    take the non-awaiting ``_pull_sync`` path instead.
     """
     try:
         return await src.next_item()
     except asyncio.CancelledError:
         raise
-    except BaseException as exc:  # noqa: BLE001 — re-raised in the group below
-        excs = [exc, *await _drain(pending, src)]
-        raise BaseExceptionGroup(_GROUP_MSG, excs) from None
+    except BaseException as exc:  # noqa: BLE001 — re-raised in the group by _fail
+        return await _fail(exc, src, pending)
+
+
+def _pull_sync(
+    sync_next: Callable[[], _CoroOrTask[_R] | None],
+) -> tuple[_CoroOrTask[_R] | None, BaseException | None]:
+    """
+    Pull the next item from a sync source without awaiting.
+
+    Returns ``(item, None)`` — ``(None, None)`` once the source is
+    exhausted — or ``(None, exc)`` if the source raised: the caller forwards
+    *exc* to ``_fail``, so a raising sync source keeps ``_pull``'s exception
+    contract without paying a coroutine frame per pull on the happy path.
+    """
+    try:
+        return sync_next(), None
+    except BaseException as exc:  # noqa: BLE001 — forwarded to _fail by the caller
+        return None, exc
 
 
 def _check_concurrency(concurrency: int | None) -> None:
@@ -161,46 +219,44 @@ def _wrap_indexed(idx: int, item: _CoroOrTask[_R]) -> asyncio.Task[tuple[int, _R
         # cancelling the wrapper could not reach it — finalize it directly.
         if entered:
             return
-        if isinstance(item, asyncio.Task):
-            item.cancel()
-        else:
-            item.close()
+        exc = _finalize_item(item)
+        if exc is not None:
+            # A raising teardown propagates out of the done callback to the
+            # event loop's exception handler, exactly as an unguarded call
+            # would — it must not be silently discarded here.
+            raise exc
 
     task.add_done_callback(_finalize)
     return task
 
 
-async def _fill_indexed(
-    pending: set[asyncio.Task[tuple[int, _R]]],
+def _wrap_plain(_idx: int, item: _CoroOrTask[_R]) -> asyncio.Task[_R]:
+    """Schedule *item* as-is, ignoring its index (unordered pipelines)."""
+    return asyncio.ensure_future(item)
+
+
+async def _fill(
+    pending: set[asyncio.Task[_S]],
     src: _Source[_R],
     concurrency: int | None,
+    wrap: Callable[[int, _CoroOrTask[_R]], asyncio.Task[_S]],
 ) -> int:
-    """Schedule the initial window of indexed tasks into *pending*."""
+    """Schedule the initial window of tasks (built by *wrap*) into *pending*; return its size."""
     _check_concurrency(concurrency)
+    sync_next = src.sync_next
     idx = 0
     while concurrency is None or idx < concurrency:
-        item = await _pull(src, pending)
+        if sync_next is None:
+            item = await _pull(src, pending)
+        else:
+            item, exc = _pull_sync(sync_next)
+            if exc is not None:
+                await _fail(exc, src, pending)
         if item is None:
             break
-        pending.add(_wrap_indexed(idx, item))
+        pending.add(wrap(idx, item))
         idx += 1
     return idx
-
-
-async def _fill_unordered(
-    pending: set[asyncio.Task[_R]],
-    src: _Source[_R],
-    concurrency: int | None,
-) -> None:
-    """Schedule the initial window of tasks into *pending*."""
-    _check_concurrency(concurrency)
-    count = 0
-    while concurrency is None or count < concurrency:
-        item = await _pull(src, pending)
-        if item is None:
-            return
-        pending.add(asyncio.ensure_future(item))
-        count += 1
 
 
 def _split_done(done: set[asyncio.Task[_R]]) -> tuple[list[_R], list[BaseException]]:
@@ -292,11 +348,12 @@ async def collect(
 
     """
     src: _Source[Result[T, E]] = _Source(iterable)
+    sync_next = src.sync_next
     pending: set[asyncio.Task[tuple[int, Result[T, E]]]] = set()
     indexed: dict[int, T] = {}
 
     try:
-        next_idx = await _fill_indexed(pending, src, concurrency)
+        next_idx = await _fill(pending, src, concurrency, _wrap_indexed)
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             batch, excs = _split_done(done)
@@ -309,7 +366,12 @@ async def collect(
                 match result:
                     case Ok(value):
                         indexed[idx] = value
-                        next_item = await _pull(src, pending)
+                        if sync_next is None:
+                            next_item = await _pull(src, pending)
+                        else:
+                            next_item, exc = _pull_sync(sync_next)
+                            if exc is not None:
+                                await _fail(exc, src, pending)
                         if next_item is not None:
                             pending.add(_wrap_indexed(next_idx, next_item))
                             next_idx += 1
@@ -475,11 +537,12 @@ async def partition(
 
     """
     src: _Source[Result[T, E]] = _Source(iterable)
+    sync_next = src.sync_next
     pending: set[asyncio.Task[tuple[int, Result[T, E]]]] = set()
     indexed: dict[int, Result[T, E]] = {}
 
     try:
-        next_idx = await _fill_indexed(pending, src, concurrency)
+        next_idx = await _fill(pending, src, concurrency, _wrap_indexed)
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             batch, excs = _split_done(done)
@@ -489,7 +552,12 @@ async def partition(
                 raise BaseExceptionGroup(_GROUP_MSG, excs)
             for idx, result in batch:
                 indexed[idx] = result
-                next_item = await _pull(src, pending)
+                if sync_next is None:
+                    next_item = await _pull(src, pending)
+                else:
+                    next_item, exc = _pull_sync(sync_next)
+                    if exc is not None:
+                        await _fail(exc, src, pending)
                 if next_item is not None:
                     pending.add(_wrap_indexed(next_idx, next_item))
                     next_idx += 1
@@ -658,11 +726,12 @@ async def first_ok(
 
     """
     src: _Source[Result[T, E]] = _Source(iterable)
+    sync_next = src.sync_next
     pending: set[asyncio.Task[tuple[int, Result[T, E]]]] = set()
     indexed: dict[int, E] = {}
 
     try:
-        next_idx = await _fill_indexed(pending, src, concurrency)
+        next_idx = await _fill(pending, src, concurrency, _wrap_indexed)
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             batch, excs = _split_done(done)
@@ -677,18 +746,19 @@ async def first_ok(
                 match result:
                     case Ok():
                         return result
-                    case Err():
-                        pass
             for idx, result in batch:
                 match result:
                     case Err(e):
                         indexed[idx] = e
-                        next_item = await _pull(src, pending)
+                        if sync_next is None:
+                            next_item = await _pull(src, pending)
+                        else:
+                            next_item, exc = _pull_sync(sync_next)
+                            if exc is not None:
+                                await _fail(exc, src, pending)
                         if next_item is not None:
                             pending.add(_wrap_indexed(next_idx, next_item))
                             next_idx += 1
-                    case Ok():  # pragma: no cover — handled by the loop above
-                        pass
     finally:
         await _cancel_all(pending, src)
 
@@ -729,10 +799,11 @@ async def filter_ok_unordered(
 
     """
     src: _Source[Result[T, E]] = _Source(iterable)
+    sync_next = src.sync_next
     pending: set[asyncio.Task[Result[T, E]]] = set()
 
     try:
-        await _fill_unordered(pending, src, concurrency)
+        await _fill(pending, src, concurrency, _wrap_plain)
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             results, excs = _split_done(done)
@@ -746,7 +817,12 @@ async def filter_ok_unordered(
                         yield value
                     case Err():
                         pass
-                next_item = await _pull(src, pending)
+                if sync_next is None:
+                    next_item = await _pull(src, pending)
+                else:
+                    next_item, exc = _pull_sync(sync_next)
+                    if exc is not None:
+                        await _fail(exc, src, pending)
                 if next_item is not None:
                     pending.add(asyncio.ensure_future(next_item))
     finally:
@@ -787,10 +863,11 @@ async def filter_err_unordered(
 
     """
     src: _Source[Result[T, E]] = _Source(iterable)
+    sync_next = src.sync_next
     pending: set[asyncio.Task[Result[T, E]]] = set()
 
     try:
-        await _fill_unordered(pending, src, concurrency)
+        await _fill(pending, src, concurrency, _wrap_plain)
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             results, excs = _split_done(done)
@@ -804,7 +881,12 @@ async def filter_err_unordered(
                         pass
                     case Err(e):
                         yield e
-                next_item = await _pull(src, pending)
+                if sync_next is None:
+                    next_item = await _pull(src, pending)
+                else:
+                    next_item, exc = _pull_sync(sync_next)
+                    if exc is not None:
+                        await _fail(exc, src, pending)
                 if next_item is not None:
                     pending.add(asyncio.ensure_future(next_item))
     finally:
@@ -847,12 +929,13 @@ async def filter_ok(
 
     """
     src: _Source[Result[T, E]] = _Source(iterable)
+    sync_next = src.sync_next
     pending: set[asyncio.Task[tuple[int, Result[T, E]]]] = set()
     buf: dict[int, Result[T, E]] = {}
     next_yield = 0
 
     try:
-        next_idx = await _fill_indexed(pending, src, concurrency)
+        next_idx = await _fill(pending, src, concurrency, _wrap_indexed)
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             batch, excs = _split_done(done)
@@ -862,7 +945,12 @@ async def filter_ok(
                 raise BaseExceptionGroup(_GROUP_MSG, excs)
             for idx, result in batch:
                 buf[idx] = result
-                next_item = await _pull(src, pending)
+                if sync_next is None:
+                    next_item = await _pull(src, pending)
+                else:
+                    next_item, exc = _pull_sync(sync_next)
+                    if exc is not None:
+                        await _fail(exc, src, pending)
                 if next_item is not None:
                     pending.add(_wrap_indexed(next_idx, next_item))
                     next_idx += 1
@@ -914,12 +1002,13 @@ async def filter_err(
 
     """
     src: _Source[Result[T, E]] = _Source(iterable)
+    sync_next = src.sync_next
     pending: set[asyncio.Task[tuple[int, Result[T, E]]]] = set()
     buf: dict[int, Result[T, E]] = {}
     next_yield = 0
 
     try:
-        next_idx = await _fill_indexed(pending, src, concurrency)
+        next_idx = await _fill(pending, src, concurrency, _wrap_indexed)
         while pending:
             done, pending = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             batch, excs = _split_done(done)
@@ -929,7 +1018,12 @@ async def filter_err(
                 raise BaseExceptionGroup(_GROUP_MSG, excs)
             for idx, result in batch:
                 buf[idx] = result
-                next_item = await _pull(src, pending)
+                if sync_next is None:
+                    next_item = await _pull(src, pending)
+                else:
+                    next_item, exc = _pull_sync(sync_next)
+                    if exc is not None:
+                        await _fail(exc, src, pending)
                 if next_item is not None:
                     pending.add(_wrap_indexed(next_idx, next_item))
                     next_idx += 1
@@ -985,10 +1079,11 @@ async def try_reduce(
 
     """
     src: _Source[T] = _Source(iterable)
+    sync_next = src.sync_next
     acc: U = initial
     try:
         while True:
-            item = await src.next_item()
+            item = sync_next() if sync_next is not None else await src.next_item()
             if item is None:
                 break
             value: T = await item

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import inspect
-from collections.abc import AsyncIterator, Coroutine
+from collections.abc import AsyncIterator, Coroutine, Iterator
 from typing import Any, TypeVar
 
 import pytest
@@ -1656,6 +1656,13 @@ class TestAsyncIterableSources:
                 pass
         assert exc_info.group_contains(RuntimeError, match="source broke")
 
+    async def test_first_ok_err_refills_from_async_source(self) -> None:
+        async def source() -> AsyncIterator[ResultCoro]:
+            yield err_after("e0")
+            yield ok_after(7)
+
+        assert await first_ok(source(), concurrency=1) == Ok(7)
+
     async def test_try_reduce(self) -> None:
         async def source() -> AsyncIterator[IntCoro]:
             for i in (1, 2, 3):
@@ -1696,3 +1703,85 @@ class TestAsyncIterableSources:
 
         with pytest.raises(RuntimeError, match="source broke"):
             await try_reduce(source(), 0, add)
+
+
+# ---------------------------------------------------------------------------
+# Raising sync sources
+# ---------------------------------------------------------------------------
+
+
+class TestRaisingSyncSources:
+    """A raising sync source follows the same contract as a raising async one."""
+
+    def _source(self, first: ResultCoro) -> Iterator[ResultCoro]:
+        yield first
+        raise RuntimeError("source broke")
+
+    async def test_collect_initial_fill_wraps_in_group(self) -> None:
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await collect(self._source(ok_after(1)))
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+
+    async def test_collect_refill_wraps_in_group_and_cancels(self) -> None:
+        cancelled: list[int] = []
+
+        async def slow(v: int) -> Ok[int]:
+            try:
+                await asyncio.sleep(10)
+                return Ok(v)
+            except asyncio.CancelledError:
+                cancelled.append(v)
+                raise
+
+        def source() -> Iterator[ResultCoro]:
+            yield ok_after(0)
+            yield slow(1)
+            raise RuntimeError("source broke")
+
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await collect(source(), concurrency=2)
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+        assert cancelled == [1]
+
+    async def test_partition_refill(self) -> None:
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await partition(self._source(ok_after(0)), concurrency=1)
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+
+    async def test_first_ok_refill(self) -> None:
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await first_ok(self._source(err_after("e")), concurrency=1)
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+
+    async def test_filter_ok_refill(self) -> None:
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            async for _ in filter_ok(self._source(ok_after(1)), concurrency=1):
+                pass
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+
+    async def test_filter_err_refill(self) -> None:
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            async for _ in filter_err(self._source(err_after("e")), concurrency=1):
+                pass
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+
+    async def test_filter_ok_unordered_refill(self) -> None:
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            async for _ in filter_ok_unordered(self._source(ok_after(1)), concurrency=1):
+                pass
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+
+    async def test_filter_err_unordered_refill(self) -> None:
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            async for _ in filter_err_unordered(self._source(err_after("e")), concurrency=1):
+                pass
+        assert exc_info.group_contains(RuntimeError, match="source broke")
+
+    async def test_cancellation_passes_through_bare(self) -> None:
+        # cancellation is not a source failure — it must not be wrapped
+        def source() -> Iterator[ResultCoro]:
+            yield ok_after(0)
+            raise asyncio.CancelledError
+
+        with pytest.raises(asyncio.CancelledError):
+            await collect(source(), concurrency=1)
