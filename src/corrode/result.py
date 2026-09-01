@@ -67,7 +67,11 @@ class Ok(Generic[T_co]):
         msg = "Ok is immutable"
         raise AttributeError(msg)
 
-    def __reduce__(self) -> tuple[Callable[[T_co], Ok[T_co]], tuple[T_co]]:
+    # ty: covariant T_co in the constructor callable is safe: pickle only ever
+    # round-trips the instance's own value, never substitutes a supertype.
+    def __reduce__(
+        self,
+    ) -> tuple[Callable[[T_co], Ok[T_co]], tuple[T_co]]:  # ty: ignore[invalid-generic-class]
         return (Ok, (self._value,))
 
     def __repr__(self) -> str:
@@ -624,7 +628,11 @@ class Err(Generic[E_co]):
         msg = "Err is immutable"
         raise AttributeError(msg)
 
-    def __reduce__(self) -> tuple[Callable[[E_co], Err[E_co]], tuple[E_co]]:
+    # ty: covariant E_co in the constructor callable is safe: pickle only ever
+    # round-trips the instance's own value, never substitutes a supertype.
+    def __reduce__(
+        self,
+    ) -> tuple[Callable[[E_co], Err[E_co]], tuple[E_co]]:  # ty: ignore[invalid-generic-class]
         return (Err, (self._value,))
 
     def __repr__(self) -> str:
