@@ -261,6 +261,31 @@ class TestConcurrencyN:
         assert all(v <= 2 for v in started)
 
 
+class TestConcurrencyValidation:
+    async def test_collect_zero_raises(self) -> None:
+        with pytest.raises(ValueError, match="concurrency must be at least 1"):
+            await collect([ok_after(1)], concurrency=0)
+
+    async def test_first_ok_zero_raises(self) -> None:
+        with pytest.raises(ValueError, match="concurrency must be at least 1"):
+            await first_ok([ok_after(1)], concurrency=0)
+
+    async def test_negative_raises_with_value_in_message(self) -> None:
+        with pytest.raises(ValueError, match="got -3"):
+            await collect([ok_after(1)], concurrency=-3)
+
+    async def test_filter_ok_unordered_zero_raises(self) -> None:
+        with pytest.raises(ValueError, match="concurrency must be at least 1"):
+            async for _ in filter_ok_unordered([ok_after(1)], concurrency=0):
+                pass
+
+    async def test_collect_concurrency_one_still_works(self) -> None:
+        assert await collect([ok_after(1), ok_after(2)], concurrency=1) == Ok([1, 2])
+
+    async def test_first_ok_concurrency_one_still_works(self) -> None:
+        assert await first_ok([err_after("nope"), ok_after(1)], concurrency=1) == Ok(1)
+
+
 # ---------------------------------------------------------------------------
 # Order guarantee
 # ---------------------------------------------------------------------------
@@ -390,6 +415,34 @@ class TestExceptionPropagation:
 
         names = sorted(type(e).__name__ for e in exc_info.value.exceptions)
         assert names == ["RuntimeError", "ValueError"]
+
+    async def test_sync_source_close_exception_joins_group_and_drain_continues(self) -> None:
+        # a coroutine whose close() raises mid-drain must not stop the drain:
+        # the close exception joins the group and later items are still closed
+        closed: list[int] = []
+
+        async def boom() -> Ok[int]:
+            raise RuntimeError("boom")
+
+        async def tracked(v: int) -> Ok[int]:
+            try:
+                await asyncio.sleep(10)
+                return Ok(v)
+            finally:
+                closed.append(v)
+                if v == 2:
+                    raise ValueError("close failed")
+
+        unconsumed = [tracked(1), tracked(2), tracked(3)]
+        for coro in unconsumed:
+            coro.send(None)  # start each one so its finally runs on close()
+
+        with pytest.raises(BaseExceptionGroup) as exc_info:
+            await collect([boom(), *unconsumed], concurrency=1)
+
+        assert exc_info.group_contains(RuntimeError, match="boom")
+        assert exc_info.group_contains(ValueError, match="close failed")
+        assert closed == [1, 2, 3]
 
     async def test_cancelling_collect_cancels_children(self) -> None:
         # cancelling the caller's task must not leak the inner tasks
@@ -1337,6 +1390,40 @@ class TestTryReduce:
         result = await try_reduce([int_after(1), remaining], 0, fail)
         assert result == Err("nope: 1")
         assert inspect.getcoroutinestate(remaining) == "CORO_CLOSED"
+
+    async def test_source_teardown_exception_does_not_mask_primary_exception(self) -> None:
+        # the awaited item raises ValueError, then closing the source raises
+        # RuntimeError — the caller must still see the ValueError, bare
+        async def boom() -> int:
+            raise ValueError("primary")
+
+        async def source() -> AsyncIterator[IntCoro]:
+            try:
+                yield boom()
+            finally:
+                raise RuntimeError("teardown")
+
+        def add(acc: int, x: int) -> Ok[int]:
+            return Ok(acc + x)
+
+        with pytest.raises(ValueError, match="primary"):
+            await try_reduce(source(), 0, add)
+
+    async def test_source_teardown_exception_does_not_mask_err_result(self) -> None:
+        # the fold short-circuits with Err, then closing the source raises —
+        # the Err is still returned and the teardown exception is suppressed
+        def fail(_acc: int, x: int) -> Err[str]:
+            return Err(f"nope: {x}")
+
+        async def source() -> AsyncIterator[IntCoro]:
+            try:
+                yield int_after(1)
+                yield int_after(2)
+            finally:
+                raise RuntimeError("teardown")
+
+        result = await try_reduce(source(), 0, fail)
+        assert result == Err("nope: 1")
 
 
 # ---------------------------------------------------------------------------

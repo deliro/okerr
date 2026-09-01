@@ -357,8 +357,9 @@ assert partition([parse("1"), parse("x"), parse("2")]) == ([1, 2], ["not a numbe
 | `try_reduce`                               | sequential fold, short-circuit on `Err`                        |
 | `zip`                                      | `Result.zip` for 2–5 awaitables: all values as a tuple, or the first `Err` cancels the rest |
 
-Every iterable-taking function accepts `concurrency` to bound how many tasks run at once
-(`None` = unlimited). Each also takes either a plain iterable or an
+Every concurrent function takes `concurrency` to bound how many tasks run at once —
+`None` means unlimited, except for `filter_ok` / `filter_err`, which require an explicit
+bound; `try_reduce` is sequential and takes none. Each also takes either a plain iterable or an
 async iterable of awaitables (e.g. an async generator over a paginated API) —
 async sources are consumed lazily and closed on exit. All of them clean up
 after themselves: cancelling the

@@ -66,12 +66,16 @@ class _Source(Generic[_R]):
     async def aclose(self) -> list[BaseException]:
         """Finalize the source, returning non-cancellation teardown exceptions."""
         if not isinstance(self._it, AsyncIterator):
+            excs: list[BaseException] = []
             for item in self._it:
-                if isinstance(item, asyncio.Task):
-                    item.cancel()
-                else:
-                    item.close()
-            return []
+                try:
+                    if isinstance(item, asyncio.Task):
+                        item.cancel()
+                    else:
+                        item.close()
+                except BaseException as exc:  # noqa: BLE001 — collected by the caller
+                    excs.append(exc)
+            return excs
         aclose = getattr(self._it, "aclose", None)
         if aclose is None:
             return []
@@ -135,6 +139,13 @@ async def _pull(
         raise BaseExceptionGroup(_GROUP_MSG, excs) from None
 
 
+def _check_concurrency(concurrency: int | None) -> None:
+    """Reject a concurrency bound that would silently schedule nothing."""
+    if concurrency is not None and concurrency < 1:
+        msg = f"concurrency must be at least 1 or None (unlimited), got {concurrency}"
+        raise ValueError(msg)
+
+
 def _wrap_indexed(idx: int, item: _CoroOrTask[_R]) -> asyncio.Task[tuple[int, _R]]:
     entered = False
 
@@ -165,6 +176,7 @@ async def _fill_indexed(
     concurrency: int | None,
 ) -> int:
     """Schedule the initial window of indexed tasks into *pending*."""
+    _check_concurrency(concurrency)
     idx = 0
     while concurrency is None or idx < concurrency:
         item = await _pull(src, pending)
@@ -181,6 +193,7 @@ async def _fill_unordered(
     concurrency: int | None,
 ) -> None:
     """Schedule the initial window of tasks into *pending*."""
+    _check_concurrency(concurrency)
     count = 0
     while concurrency is None or count < concurrency:
         item = await _pull(src, pending)
@@ -357,7 +370,9 @@ async def zip(  # noqa: A001 — intentional builtin shadow, mirrors Result.zip
     the values are combined into a single tuple.
 
     Values are returned in argument order, regardless of completion order.
-    Returns the first ``Err`` to complete, cancelling the remaining awaitables.
+    Returns the first ``Err`` to complete, cancelling the remaining awaitables;
+    if several complete in the same event-loop iteration, the earliest by
+    argument order is returned.
 
     All awaitables are scheduled at once — there is no concurrency limit.
 
@@ -588,12 +603,13 @@ async def first_ok(
     Accepts a plain iterable or an async iterable (e.g. an async generator)
     of awaitables — async sources are consumed lazily and closed on exit.
 
-    The first ``Ok`` to complete wins: remaining in-flight tasks are cancelled
-    and unconsumed items are closed — slower alternatives are not awaited once
-    one has succeeded. An early ``Err`` does not end the race: it is recorded
-    and the race continues. If every awaitable completes with ``Err``, returns
-    ``Err`` of every error in input order (not completion order); empty input
-    gives ``Err([])``.
+    The first ``Ok`` to complete wins (if several complete in the same
+    event-loop iteration, the earliest by input order is returned): remaining
+    in-flight tasks are cancelled and unconsumed items are closed — slower
+    alternatives are not awaited once one has succeeded. An early ``Err``
+    does not end the race: it is recorded and the race continues. If every
+    awaitable completes with ``Err``, returns ``Err`` of every error in input
+    order (not completion order); empty input gives ``Err([])``.
 
     *concurrency* limits how many run at the same time.
     ``None`` means unlimited — all are scheduled at once.
@@ -946,6 +962,11 @@ async def try_reduce(
 
     On short-circuit — and on any exception — remaining tasks are cancelled,
     unconsumed coroutines are closed, and an async-generator source is closed.
+    Exceptions raised during that teardown never mask the fold's outcome: a
+    propagating exception stays the exception the caller sees, a normal
+    ``Ok`` / ``Err`` return is still returned, and the teardown exception
+    itself is suppressed — the same policy the concurrent functions apply on
+    their success path.
 
     **Exceptions**: unlike the concurrent functions, execution is sequential —
     only one coroutine can fail — so exceptions propagate bare, without an
@@ -977,7 +998,5 @@ async def try_reduce(
                 case Err() as err:
                     return err
     finally:
-        teardown_excs = await src.aclose()
-        if teardown_excs:
-            raise teardown_excs[0]
+        await src.aclose()
     return Ok(acc)
