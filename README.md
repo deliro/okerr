@@ -30,6 +30,9 @@ doctest in CI.
 - [Strict by design](#strict-by-design)
 - [Iterator utilities](#iterator-utilities)
 - [Async iterator utilities](#async-iterator-utilities)
+  - [Racing alternatives](#racing-alternatives)
+  - [Fan-out over different types](#fan-out-over-different-types)
+  - [Streaming sources](#streaming-sources)
   - [Exceptions and `ExceptionGroup`](#exceptions-and-exceptiongroup)
 - [Adopting corrode in an existing codebase](#adopting-corrode-in-an-existing-codebase)
 - [Typing](#typing)
@@ -235,6 +238,20 @@ assert find_product("mate").zip(parse_qty("no")) == Err("unknown product: mate")
 assert find_product("mate").or_else(lambda _: find_product("tea")) == Ok(tea)
 assert find_product("tea").or_else(lambda _: find_product("mate")) == Ok(tea)
 
+
+# A lookup can both fail and legitimately find nothing. transpose moves the
+# "nothing" out of the Result, so "this order has no coupon" stays a separate
+# case from "the coupon service is down" instead of hiding inside Ok(None)
+def find_coupon(order: str) -> Result[int | None, str]:
+    if order == "broken":
+        return Err("coupon service unavailable")
+    return Ok(500 if order == "tea" else None)
+
+
+assert find_coupon("tea").transpose() == Ok(500)
+assert find_coupon("mate").transpose() is None
+assert find_coupon("broken").transpose() == Err("coupon service unavailable")
+
 # Results are ordinary values, so they can be stored. Reading one back
 # yields nesting, which flatten collapses — keeping "no such order",
 # "the order failed", and "the order succeeded" distinct
@@ -340,6 +357,55 @@ assert collect_all([parse("1"), parse("x"), parse("y")]) == Err(
 assert partition([parse("1"), parse("x"), parse("2")]) == ([1, 2], ["not a number: 'x'"])
 ```
 
+`first_ok` is the mirror image of `collect`: it takes the first success and
+keeps every failure. Typical use is a fallback chain — several ways to obtain
+the same thing, tried in order of preference:
+
+```python
+from dataclasses import dataclass
+from corrode import Ok, Err, Result
+from corrode.iterator import first_ok
+
+
+@dataclass(frozen=True)
+class Payment:
+    order: str
+    cents: int
+
+
+# Two payload versions are in flight during a producer rollout
+def parse_v2(raw: dict[str, object]) -> Result[Payment, str]:
+    match raw:
+        case {"order_id": str(order), "amount_cents": int(cents)}:
+            return Ok(Payment(order=order, cents=cents))
+    return Err("v2: expected order_id and integer amount_cents")
+
+
+def parse_v1(raw: dict[str, object]) -> Result[Payment, str]:
+    match raw:
+        case {"order": str(order), "amount": str(amount)}:
+            return Ok(Payment(order=order, cents=round(float(amount) * 100)))
+    return Err("v1: expected order and decimal amount")
+
+
+def parse_webhook(raw: dict[str, object]) -> Result[Payment, list[str]]:
+    # A generator, so the fallback is lazy: parse_v1 is never called for a
+    # payload that is already v2. With one parser per schema, nothing forces
+    # the caller to know which version it is looking at.
+    return first_ok(parse(raw) for parse in (parse_v2, parse_v1))
+
+
+assert parse_webhook({"order_id": "A-1", "amount_cents": 990}) == Ok(Payment("A-1", 990))
+assert parse_webhook({"order": "A-1", "amount": "9.90"}) == Ok(Payment("A-1", 990))
+
+# Nothing matched. The rejection can be logged with every reason at once —
+# with a plain `or` chain only the last failure survives, which is exactly
+# the one that says the least about a payload that was never v1 to begin with
+assert parse_webhook({"orderId": "A-1"}) == Err(
+    ["v2: expected order_id and integer amount_cents", "v1: expected order and decimal amount"]
+)
+```
+
 ## Async iterator utilities
 
 `corrode.async_iterator` runs coroutines or tasks concurrently
@@ -393,6 +459,195 @@ async def main() -> None:
     # Error accumulation: every failure is reported, nothing is cancelled
     report = await collect_all([fetch_user(1), fetch_user(-1), fetch_user(-2)])
     assert report == Err(["bad id: -1", "bad id: -2"])
+
+
+asyncio.run(main())
+```
+
+### Racing alternatives
+
+When the same thing can be fetched from several places, `first_ok` sends the
+requests at once and returns the first success, cancelling the rest. The
+losers are cancelled, not left running in the background, so the cost of the
+extra attempts is bounded by the winner's latency.
+
+Two details make it different from `asyncio.wait(..., FIRST_COMPLETED)`:
+a returned `Err` does **not** win the race — a mirror that answers "404" in a
+millisecond must not beat the mirror that has the file — and if every
+alternative fails, the caller gets *all* the errors, which is the difference
+between a log line saying "download failed" and one that says which mirror
+said what.
+
+```python
+import asyncio
+from dataclasses import dataclass
+from corrode import Ok, Err, Result
+from corrode.async_iterator import first_ok
+
+
+@dataclass(frozen=True)
+class Mirror:
+    host: str
+    latency: float  # stands in for the network round-trip
+    artifacts: frozenset[str]
+
+
+MIRRORS = (
+    Mirror("eu.cdn.example", 0.05, frozenset({"app-1.2.3.tar"})),
+    Mirror("us.cdn.example", 0.02, frozenset({"app-1.2.3.tar"})),
+    # Fast to answer, but this region has not replicated the release yet
+    Mirror("ap.cdn.example", 0.01, frozenset()),
+)
+
+
+async def download(mirror: Mirror, artifact: str) -> Result[bytes, str]:
+    await asyncio.sleep(mirror.latency)
+    if artifact not in mirror.artifacts:
+        return Err(f"{mirror.host}: 404 {artifact}")
+    return Ok(f"{artifact} via {mirror.host}".encode())
+
+
+async def main() -> None:
+    # The 404 from ap arrives first and is recorded, not returned; us wins
+    # the race and eu is cancelled mid-flight
+    release = await first_ok([download(m, "app-1.2.3.tar") for m in MIRRORS])
+    assert release == Ok(b"app-1.2.3.tar via us.cdn.example")
+
+    # Nowhere to be found: one report, every mirror, in input order
+    missing = await first_ok([download(m, "app-9.9.9.tar") for m in MIRRORS])
+    assert missing == Err(
+        [
+            "eu.cdn.example: 404 app-9.9.9.tar",
+            "us.cdn.example: 404 app-9.9.9.tar",
+            "ap.cdn.example: 404 app-9.9.9.tar",
+        ]
+    )
+
+
+asyncio.run(main())
+```
+
+### Fan-out over different types
+
+`collect` needs a homogeneous list. Assembling one page out of several
+unrelated calls is the heterogeneous case: `zip` takes 2–5 awaitables of
+different types and returns a typed tuple, or the first `Err` — with the
+remaining calls cancelled, so a checkout that already failed on the profile
+does not keep charging the shipping API.
+
+Compared to `asyncio.gather`, the values stay typed instead of collapsing
+into `list[Any]`, and an expected failure ("card declined") stays a value
+instead of becoming an exception that has to be told apart from a bug.
+
+```python
+import asyncio
+from dataclasses import dataclass
+from corrode import Ok, Err, Result, async_iterator
+
+
+@dataclass(frozen=True)
+class Profile:
+    name: str
+    tier: str
+
+
+@dataclass(frozen=True)
+class Quote:
+    carrier: str
+    cents: int
+
+
+completed: list[str] = []
+
+
+async def load_profile(user_id: int) -> Result[Profile, str]:
+    return Ok(Profile(name="Alice", tier="gold"))
+
+
+async def load_balance(user_id: int) -> Result[int, str]:
+    return Err("billing: card declined") if user_id == 13 else Ok(2500)
+
+
+async def shipping_quote(user_id: int) -> Result[Quote, str]:
+    await asyncio.sleep(0.05)  # the slowest upstream
+    completed.append("shipping")
+    return Ok(Quote(carrier="dhl", cents=490))
+
+
+async def checkout(user_id: int) -> Result[tuple[Profile, int, Quote], str]:
+    # zip shadows the builtin on purpose, mirroring Result.zip — reach for it
+    # through the module to keep the builtin available
+    return await async_iterator.zip(
+        load_profile(user_id),
+        load_balance(user_id),
+        shipping_quote(user_id),
+    )
+
+
+async def main() -> None:
+    page = await checkout(user_id=1)
+    assert page == Ok((Profile("Alice", "gold"), 2500, Quote("dhl", 490)))
+
+    # The declined card ends the checkout, and the shipping call is cancelled
+    # rather than left to finish into a response nobody will read
+    assert await checkout(user_id=13) == Err("billing: card declined")
+    assert completed == ["shipping"]  # only the successful checkout got there
+
+
+asyncio.run(main())
+```
+
+### Streaming sources
+
+Every function here also accepts an async iterable, so the work does not have
+to be listed up front. The usual source is a paginated API or a database
+cursor: materialising it first (`[x async for x in pages()]`) means crawling
+the whole thing into memory before the first item is processed, and the
+concurrency limit then applies to nothing.
+
+Passing the async generator directly keeps the two interleaved — pages are
+pulled only as workers free up, so at most `concurrency` requests are in
+flight and memory stays bounded no matter how many pages there are.
+
+```python
+import asyncio
+from collections.abc import AsyncIterator
+from corrode import Ok, Result
+from corrode.async_iterator import map_collect
+
+PAGES: dict[str | None, tuple[list[int], str | None]] = {
+    None: ([1, 2, 3], "cursor-2"),
+    "cursor-2": ([4, 5, 6], "cursor-3"),
+    "cursor-3": ([7, 8], None),
+}
+
+
+async def list_orders(cursor: str | None) -> tuple[list[int], str | None]:
+    await asyncio.sleep(0.01)  # one round-trip per page
+    return PAGES[cursor]
+
+
+async def order_ids() -> AsyncIterator[int]:
+    cursor: str | None = None
+    while True:
+        page, cursor = await list_orders(cursor)
+        for order_id in page:
+            yield order_id
+        if cursor is None:
+            return
+
+
+async def order_total(order_id: int) -> Result[int, str]:
+    await asyncio.sleep(0.01)
+    return Ok(order_id * 100)
+
+
+async def main() -> None:
+    # Listing and fetching overlap: the totals for page 1 are already being
+    # fetched while page 2 is still being listed. Four in flight at a time,
+    # and the generator is closed on exit even if a fetch fails
+    totals = await map_collect(order_ids(), order_total, concurrency=4)
+    assert totals == Ok([100, 200, 300, 400, 500, 600, 700, 800])
 
 
 asyncio.run(main())

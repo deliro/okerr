@@ -296,6 +296,10 @@ async def collect(
 
     Accepts a plain iterable or an async iterable (e.g. an async generator)
     of awaitables — async sources are consumed lazily and closed on exit.
+    An async source keeps listing and processing interleaved: passing an
+    async generator over a paginated API means at most *concurrency* requests
+    are in flight, where materialising it first would crawl every page into
+    memory before the first item is processed.
 
     Results are returned in input order.
     Returns the first ``Err`` encountered, cancelling remaining tasks.
@@ -429,7 +433,12 @@ async def zip(  # noqa: A001 — intentional builtin shadow, mirrors Result.zip
 
     The heterogeneous sibling of ``collect`` and the async counterpart of
     ``Result.zip``: each awaitable may produce a different ``Ok`` type, and
-    the values are combined into a single tuple.
+    the values are combined into a single tuple. Use it to assemble one
+    response out of several unrelated calls — the case ``collect`` cannot
+    cover, since it needs a homogeneous list. Unlike ``asyncio.gather``, the
+    values stay typed instead of collapsing into ``list[Any]``, and an
+    expected failure stays a value instead of an exception to be told apart
+    from a bug.
 
     Values are returned in argument order, regardless of completion order.
     Returns the first ``Err`` to complete, cancelling the remaining awaitables;
@@ -445,20 +454,24 @@ async def zip(  # noqa: A001 — intentional builtin shadow, mirrors Result.zip
     on timing. Handle with ``except*``.
 
     Examples:
+        A checkout page needs a profile, a balance and a shipping quote —
+        three types, three upstreams, one round of latency:
+
         >>> import asyncio
-        >>> async def fetch_name() -> Result[str, str]:
+        >>> async def load_profile() -> Result[str, str]:
         ...     return Ok("alice")
-        >>> async def fetch_age() -> Result[int, str]:
-        ...     return Ok(30)
-        >>> asyncio.run(zip(fetch_name(), fetch_age()))
-        Ok(('alice', 30))
+        >>> async def load_balance() -> Result[int, str]:
+        ...     return Ok(2500)
+        >>> asyncio.run(zip(load_profile(), load_balance()))
+        Ok(('alice', 2500))
 
-        The first ``Err`` to complete wins and the rest are cancelled:
+        The first ``Err`` to complete wins and the rest are cancelled, so a
+        checkout that already failed stops charging the other upstreams:
 
-        >>> async def broken() -> Result[int, str]:
-        ...     return Err("bad")
-        >>> asyncio.run(zip(fetch_name(), broken()))
-        Err('bad')
+        >>> async def load_balance_declined() -> Result[int, str]:
+        ...     return Err("card declined")
+        >>> asyncio.run(zip(load_profile(), load_balance_declined()))
+        Err('card declined')
 
     """
     collected = await collect(results)
@@ -665,8 +678,11 @@ async def first_ok(
     Race coroutines or tasks concurrently, returning the first ``Ok`` to complete.
 
     The dual of ``collect``: ``collect`` is all values or the first error,
-    ``first_ok`` is the first value or all errors. Use it to try alternative
-    sources concurrently and take whichever succeeds first.
+    ``first_ok`` is the first value or all errors. Use it when the same thing
+    can be fetched from several places — mirrors, replicas, cache tiers:
+    ask all of them at once and pay the fastest one's latency instead of the
+    preferred one's. The cost of the extra attempts is bounded, since the
+    losers are cancelled rather than left running.
 
     Accepts a plain iterable or an async iterable (e.g. an async generator)
     of awaitables — async sources are consumed lazily and closed on exit.
@@ -695,34 +711,35 @@ async def first_ok(
 
     Examples:
         >>> import asyncio
-        >>> async def source(name: str, delay: float, ok: bool) -> Result[str, str]:
-        ...     await asyncio.sleep(delay)
-        ...     return Ok(name) if ok else Err(f"{name} failed")
+        >>> async def download(host: str, latency: float, has_file: bool) -> Result[str, str]:
+        ...     await asyncio.sleep(latency)
+        ...     return Ok(f"app.tar from {host}") if has_file else Err(f"{host}: 404")
 
-        A fast ``Err`` does not end the race — the slower ``Ok`` still wins:
+        A fast ``Err`` does not end the race — a mirror that answers "404"
+        first must not beat the mirror that has the file:
 
         >>> asyncio.run(
         ...     first_ok(
         ...         [
-        ...             source("mirror", 0.0, ok=False),
-        ...             source("primary", 0.01, ok=True),
+        ...             download("ap.cdn", 0.0, has_file=False),
+        ...             download("us.cdn", 0.01, has_file=True),
         ...         ],
         ...     ),
         ... )
-        Ok('primary')
+        Ok('app.tar from us.cdn')
 
         When every alternative fails, the errors arrive in input order,
-        regardless of completion order:
+        regardless of completion order — the log says which mirror said what:
 
         >>> asyncio.run(
         ...     first_ok(
         ...         [
-        ...             source("primary", 0.01, ok=False),
-        ...             source("mirror", 0.0, ok=False),
+        ...             download("us.cdn", 0.01, has_file=False),
+        ...             download("ap.cdn", 0.0, has_file=False),
         ...         ],
         ...     ),
         ... )
-        Err(['primary failed', 'mirror failed'])
+        Err(['us.cdn: 404', 'ap.cdn: 404'])
 
     """
     src: _Source[Result[T, E]] = _Source(iterable)

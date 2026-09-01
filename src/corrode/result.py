@@ -561,6 +561,11 @@ class Ok(Generic[T_co]):
         ``None`` if the contained value is ``None``, the ``Ok`` unchanged
         otherwise. This is the inverse of ``from_optional``.
 
+        Use it for a lookup that can both fail and legitimately find nothing:
+        moving the "nothing" out of the ``Result`` keeps "no such row" a
+        branch of its own instead of an ``Ok(None)`` that every caller
+        downstream has to remember to check.
+
         Examples:
             >>> Ok(1).transpose()
             Ok(1)

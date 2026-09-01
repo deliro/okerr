@@ -65,19 +65,37 @@ def first_ok(iterable: Iterable[Result[T, E]]) -> Result[T, list[E]]:
     Return the first ``Ok`` encountered, short-circuiting the iteration.
 
     The dual of ``collect``: ``collect`` is all values or the first error,
-    ``first_ok`` is the first value or all errors. Use it to try alternative
-    sources until one succeeds.
+    ``first_ok`` is the first value or all errors. Use it for a fallback
+    chain — several ways to obtain the same thing, tried in order of
+    preference: config sources, payload schema versions, cache tiers.
 
     Iteration stops at the first ``Ok``, so later elements of a generator are
     never produced — this matters when producing a ``Result`` is expensive.
-    If no ``Ok`` is found, returns ``Err`` of every error in input order;
-    an empty iterable gives ``Err([])``.
+    If no ``Ok`` is found, returns ``Err`` of every error in input order,
+    so a total failure can be reported with every reason at once instead of
+    only the last one; an empty iterable gives ``Err([])``.
 
     Examples:
-        >>> first_ok([Err("a"), Ok(2), Ok(3)])
-        Ok(2)
-        >>> first_ok([Err("a"), Err("b")])
-        Err(['a', 'b'])
+        Accept two payload versions during a producer rollout, without
+        making the caller guess which one arrived:
+
+        >>> def parse_v2(raw: dict[str, object]) -> Result[int, str]:
+        ...     match raw:
+        ...         case {"amount_cents": int(cents)}:
+        ...             return Ok(cents)
+        ...     return Err("v2: no amount_cents")
+        >>> def parse_v1(raw: dict[str, object]) -> Result[int, str]:
+        ...     match raw:
+        ...         case {"amount": str(amount)}:
+        ...             return Ok(round(float(amount) * 100))
+        ...     return Err("v1: no amount")
+        >>> first_ok(parse({"amount": "9.90"}) for parse in (parse_v2, parse_v1))
+        Ok(990)
+
+        Nothing matched — every rejection is reported:
+
+        >>> first_ok(parse({"total": 990}) for parse in (parse_v2, parse_v1))
+        Err(['v2: no amount_cents', 'v1: no amount'])
         >>> first_ok([])
         Err([])
 
